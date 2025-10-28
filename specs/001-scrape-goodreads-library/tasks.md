@@ -79,55 +79,55 @@
 
 **Models**:
 
-- [ ] T025 [P] [US1] Create Book model in parse/src/models/book.py with core fields (goodreads_id, title, author, goodreads_url) and Pydantic validation
-- [ ] T026 [P] [US1] Create ReadingStatus enum in parse/src/models/shelf.py for built-in shelves (READ, CURRENTLY_READING, TO_READ); custom shelves stored as List[str] on UserBookRelation
-- [ ] T027 [P] [US1] Create UserBookRelation model in parse/src/models/user_book.py with user_rating, reading_status, shelves fields
-- [ ] T028 [P] [US1] Create Library model in parse/src/models/library.py with user_id, username, profile_url, user_books, scraped_at, schema_version fields
-- [ ] T029 [US1] Add model validation tests in parse/tests/unit/test_models.py (test all required fields, constraints, Pydantic validators)
+- [x] T025 [P] [US1] Create Book model in parse/src/models/book.py with core fields (goodreads_id, title, author, goodreads_url) and Pydantic validation
+- [x] T026 [P] [US1] Create ReadingStatus enum in parse/src/models/shelf.py for built-in shelves (READ, CURRENTLY_READING, TO_READ); custom shelves stored as List[str] on UserBookRelation
+- [x] T027 [P] [US1] Create UserBookRelation model in parse/src/models/user_book.py with user_rating, reading_status, shelves fields
+- [x] T028 [P] [US1] Create Library model in parse/src/models/library.py with user_id, username, profile_url, user_books, scraped_at, schema_version fields
+- [x] T029 [US1] Add model validation tests in parse/tests/unit/test_models.py (test all required fields, constraints, Pydantic validators)
 
 **Validators**:
 
-- [ ] T030 [P] [US1] Implement URL validator in parse/src/validators/url_validator.py (Goodreads profile URL pattern validation per FR-002)
-- [ ] T031 [P] [US1] Implement data validator in parse/src/validators/data_validator.py (rating 1-5 validation, basic field sanitization)
-- [ ] T032 [US1] Add validator tests in parse/tests/unit/test_validators.py (valid/invalid URLs, edge cases)
+- [x] T030 [P] [US1] Implement URL validator in parse/src/validators/url_validator.py (Goodreads profile URL pattern validation per FR-002)
+- [x] T031 [P] [US1] Implement data validator in parse/src/validators/data_validator.py (rating 1-5 validation, basic field sanitization)
+- [x] T032 [US1] Add validator tests in parse/tests/unit/test_validators.py (valid/invalid URLs, edge cases)
 
 **Parsing Logic**:
 
-- [ ] T033 [US1] Implement library page parser in parse/src/parsers/library_parser.py (BeautifulSoup helpers for extracting book list from library pages)
-- [ ] T034 [US1] Implement book parser in parse/src/parsers/book_parser.py (extract book details from Goodreads HTML)
-- [ ] T035 [US1] Add parser tests in parse/tests/unit/test_parsers.py (HTML parsing edge cases, malformed HTML handling)
+- [x] T033 [US1] Implement library page parser in parse/src/parsers/library_parser.py (BeautifulSoup helpers for extracting book list from library pages)
+- [x] T034 [US1] Implement book parser in parse/src/parsers/book_parser.py (extract book details from Goodreads HTML)
+- [x] T035 [US1] Add parser tests in parse/tests/unit/test_parsers.py (HTML parsing edge cases, malformed HTML handling)
 
 **Scraping Orchestration**:
 
-- [ ] T036 [US1] Implement pagination handler in parse/src/scrapers/pagination.py (detect and navigate multi-page libraries per FR-004)
-- [ ] T037 [US1] Implement main scraper orchestrator in parse/src/scrapers/goodreads_scraper.py (coordinates parsing, pagination, rate limiting per FR-008)
-- [ ] T038 [US1] Add rate limiting logic to goodreads_scraper.py (1 req/sec with time.sleep(1) per research.md decision)
-- [ ] T039 [US1] Add retry logic with exponential backoff to goodreads_scraper.py (network error handling per FR-009)
-- [ ] T040 [US1] Add progress callback support to goodreads_scraper.py (enable progress indication per SC-006)
+- [x] T036 [US1] Implement pagination handler in parse/src/scrapers/pagination.py (detect and navigate multi-page libraries per FR-004)
+- [x] T037 [US1] Implement main scraper orchestrator in parse/src/scrapers/goodreads_scraper.py (coordinates parsing, pagination, rate limiting per FR-008)
+- [x] T038 [US1] Add rate limiting logic to goodreads_scraper.py (1 req/sec with time.sleep(1) per research.md decision)
+- [x] T039 [US1] Add retry logic with exponential backoff to goodreads_scraper.py (network error handling per FR-009)
+- [x] T040 [US1] Add progress callback support to goodreads_scraper.py (enable progress indication per SC-006)
 
 **Export**:
 
-- [ ] T041 [P] [US1] Implement JSON exporter in parse/src/exporters/json_exporter.py (Pydantic model_dump_json with schema_version per FR-010)
-- [ ] T042 [P] [US1] Implement CSV exporter in parse/src/exporters/csv_exporter.py (flattened format with shelf expansion per contracts/csv-export-spec.md)
-- [ ] T043 [US1] Add exporter tests in parse/tests/unit/test_exporters.py (JSON schema validation, CSV format compliance)
+- [x] T041 [P] [US1] Implement JSON exporter in parse/src/exporters/json_exporter.py (Pydantic model_dump_json with schema_version per FR-010)
+- [x] T042 [P] [US1] Implement CSV exporter in parse/src/exporters/csv_exporter.py (flattened format with shelf expansion per contracts/csv-export-spec.md)
+- [x] T043 [US1] Add exporter tests in parse/tests/unit/test_exporters.py (JSON schema validation, CSV format compliance)
 
 **Library API**:
 
-- [ ] T044 [US1] Implement public library API in parse/src/lib/api.py (scrape_library function with progress callbacks, error handling)
-- [ ] T045 [US1] Add docstrings and type hints to parse/src/lib/api.py per Constitution Principle II (library-first architecture)
+- [x] T044 [US1] Implement public library API in parse/src/lib/api.py (scrape_library function with progress callbacks, error handling)
+- [x] T045 [US1] Add docstrings and type hints to parse/src/lib/api.py per Constitution Principle II (library-first architecture)
 
 **CLI Interface**:
 
-- [ ] T046 [US1] Implement CLI commands in parse/src/cli/commands.py using Click framework (scrape command with URL, format, output-dir args)
-- [ ] T047 [US1] Add CLI entry point in parse/src/cli/__init__.py
-- [ ] T048 [US1] Configure CLI in parse/pyproject.toml [project.scripts] section (goodreads-explorer = src.cli:main)
-- [ ] T049 [US1] Add progress bar to CLI using tqdm or rich library per SC-006
+- [x] T046 [US1] Implement CLI commands in parse/src/cli/commands.py using Click framework (scrape command with URL, format, output-dir args)
+- [x] T047 [US1] Add CLI entry point in parse/src/cli/__init__.py
+- [x] T048 [US1] Configure CLI in parse/pyproject.toml [project.scripts] section (goodreads-explorer = src.cli:main)
+- [x] T049 [US1] Add progress bar to CLI using tqdm or rich library per SC-006
 
 **Integration & Logging**:
 
-- [ ] T050 [US1] Add structured logging to scraper (log URLs accessed, book counts, errors per FR-012)
-- [ ] T051 [US1] Add structured logging to exporters (log export format, file size, schema version)
-- [ ] T052 [US1] Wire up all components in parse/src/lib/api.py (scraper → validation → export pipeline)
+- [x] T050 [US1] Add structured logging to scraper (log URLs accessed, book counts, errors per FR-012)
+- [x] T051 [US1] Add structured logging to exporters (log export format, file size, schema version)
+- [x] T052 [US1] Wire up all components in parse/src/lib/api.py (scraper → validation → export pipeline)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently. Users can scrape basic library data and export to JSON/CSV.
 

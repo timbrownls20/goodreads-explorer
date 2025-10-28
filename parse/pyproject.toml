@@ -27,7 +27,7 @@ dependencies = [
     "pydantic-extra-types>=2.1.0",
     "structlog>=23.0.0",
     "click>=8.1.0",
-    "tqdm>=4.66.0",
+    "rich>=13.0.0",
 ]
 
 [project.optional-dependencies]
@@ -41,7 +41,7 @@ dev = [
 ]
 
 [project.scripts]
-goodreads-explorer = "src.cli:main"
+goodreads-explorer = "parse.src.cli:main"
 
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
