@@ -20,16 +20,16 @@ This quickstart guide demonstrates how to use the Goodreads library scraper to e
 
 ```bash
 # Install core dependencies
-pip install beautifulsoup4 lxml httpx pydantic pydantic-extra-types
+pip3 install beautifulsoup4 lxml httpx pydantic pydantic-extra-types
 
 # Install development dependencies (for testing)
-pip install pytest pytest-asyncio pytest-cov pytest-mock
+pip3 install pytest pytest-asyncio pytest-cov pytest-mock
 ```
 
 Or using a requirements file:
 
 ```bash
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 ## Basic Usage
@@ -40,16 +40,16 @@ pip install -r requirements.txt
 
 ```bash
 # Scrape library and export to JSON
-python -m goodreads_explorer scrape https://www.goodreads.com/user/show/12345-bookworm
+python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/12345-bookworm
 
 # Scrape and specify output format
-python -m goodreads_explorer scrape https://www.goodreads.com/user/show/12345-bookworm --format json
+python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/12345-bookworm --format json
 
 # Scrape and export to CSV
-python -m goodreads_explorer scrape https://www.goodreads.com/user/show/12345-bookworm --format csv
+python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/12345-bookworm --format csv
 
 # Scrape and export to both JSON and CSV
-python -m goodreads_explorer scrape https://www.goodreads.com/user/show/12345-bookworm --format all
+python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/12345-bookworm --format all
 ```
 
 **Output**:
@@ -64,7 +64,7 @@ Progress: [████████████████████] 100% | 
 
 ```bash
 # Save exports to custom directory
-python -m goodreads_explorer scrape \
+python3 -m goodreads_explorer scrape \
   https://www.goodreads.com/user/show/12345-bookworm \
   --output-dir ./exports/
 ```
@@ -73,7 +73,7 @@ python -m goodreads_explorer scrape \
 
 ```bash
 # Resume from checkpoint if scraping was interrupted
-python -m goodreads_explorer scrape \
+python3 -m goodreads_explorer scrape \
   https://www.goodreads.com/user/show/12345-bookworm \
   --resume
 ```
@@ -249,7 +249,7 @@ See [contracts/csv-export-spec.md](./contracts/csv-export-spec.md) for detailed 
 
 ```bash
 # Create JSON backup
-python -m goodreads_explorer scrape \
+python3 -m goodreads_explorer scrape \
   https://www.goodreads.com/user/show/12345-bookworm \
   --format json \
   --output-dir ./backups/
@@ -289,7 +289,7 @@ print(f"Top 5 genres: {genre_counter.most_common(5)}")
 
 ```bash
 # Export to CSV for Excel
-python -m goodreads_explorer scrape \
+python3 -m goodreads_explorer scrape \
   https://www.goodreads.com/user/show/12345-bookworm \
   --format csv
 
@@ -350,12 +350,12 @@ View detailed scraping logs:
 
 ```bash
 # Enable verbose logging
-python -m goodreads_explorer scrape \
+python3 -m goodreads_explorer scrape \
   https://www.goodreads.com/user/show/12345-bookworm \
   --log-level DEBUG
 
 # Log to file
-python -m goodreads_explorer scrape \
+python3 -m goodreads_explorer scrape \
   https://www.goodreads.com/user/show/12345-bookworm \
   --log-file scrape.log
 ```
@@ -391,12 +391,12 @@ Log output includes:
 **Solutions**:
 ```bash
 # Increase timeout
-python -m goodreads_explorer scrape \
+python3 -m goodreads_explorer scrape \
   https://www.goodreads.com/user/show/12345-bookworm \
   --timeout 30
 
 # Enable retries
-python -m goodreads_explorer scrape \
+python3 -m goodreads_explorer scrape \
   https://www.goodreads.com/user/show/12345-bookworm \
   --retries 3
 ```

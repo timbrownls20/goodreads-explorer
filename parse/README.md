@@ -60,14 +60,14 @@ print(f"Scraped {library.total_books} books for {library.username}")
 
 ```bash
 # Run tests
-python3 -m pytest
+pytest
 
 # Run with coverage
-python3 -m pytest --cov=src --cov-report=html
+pytest --cov=src --cov-report=html
 
 # Type checking
-python3 -m mypy src
+mypy src
 
 # Linting
-python3 -m ruff check src
+ruff check src
 ```
