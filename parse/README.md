@@ -41,10 +41,10 @@ python3 -m pip install -e ".[dev]"
 
 ```bash
 # Scrape a library and export to JSON
-goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username
+goodreads-explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown
 
 # Export to CSV
-goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username --format csv
+goodreads-explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown --format csv
 ```
 
 ### Library API
@@ -52,7 +52,7 @@ goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username --f
 ```python
 from parse.src.lib import scrape_library
 
-library = scrape_library("https://www.goodreads.com/user/show/12345-username")
+library = scrape_library("https://www.goodreads.com/user/show/172435467-tim-brown")
 print(f"Scraped {library.total_books} books for {library.username}")
 ```
 

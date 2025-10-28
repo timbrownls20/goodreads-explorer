@@ -257,9 +257,9 @@ Complete hierarchical structure preserving all relationships.
 **Structure**:
 ```json
 {
-  "user_id": "12345",
-  "username": "bookworm",
-  "profile_url": "https://www.goodreads.com/user/show/12345-bookworm",
+  "user_id": "172435467",
+  "username": "tim-brown",
+  "profile_url": "https://www.goodreads.com/user/show/172435467-tim-brown",
   "total_books": 250,
   "scraped_at": "2025-10-28T10:30:00Z",
   "schema_version": "1.0.0",
@@ -311,8 +311,8 @@ date_added, date_started, date_finished, scraped_at
 
 **Example Row**:
 ```csv
-12345,bookworm,123,"Example Book","Jane Doe",978-0-123456-78-9,2020,350,"fiction|mystery",5,read,read,true,"Amazing book!",2024-12-01,2025-01-01,2025-01-15,2025-10-28T10:30:00Z
-12345,bookworm,123,"Example Book","Jane Doe",978-0-123456-78-9,2020,350,"fiction|mystery",5,read,favorites,false,"Amazing book!",2024-12-01,2025-01-01,2025-01-15,2025-10-28T10:30:00Z
+172435467,tim-brown,123,"Example Book","Jane Doe",978-0-123456-78-9,2020,350,"fiction|mystery",5,read,read,true,"Amazing book!",2024-12-01,2025-01-01,2025-01-15,2025-10-28T10:30:00Z
+172435467,tim-brown,123,"Example Book","Jane Doe",978-0-123456-78-9,2020,350,"fiction|mystery",5,read,favorites,false,"Amazing book!",2024-12-01,2025-01-01,2025-01-15,2025-10-28T10:30:00Z
 ```
 
 ---
