@@ -8,7 +8,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from parse.src.models import Book, Library, ReadingStatus, Shelf, Review, UserBookRelation
+from src.models import Book, Library, ReadingStatus, Shelf, Review, UserBookRelation
 
 
 class TestBook:

@@ -11,7 +11,7 @@ import httpx
 
 from src.exceptions import InvalidURLError, NetworkError, PrivateProfileError, RateLimitError
 from src.models import Library, UserBookRelation, Book, Shelf, ReadingStatus
-from src.parsers import parse_library_page
+from src.parsers import parse_library_page, parse_review_page_shelves
 from src.scrapers.pagination import detect_pagination, get_next_page_url, build_library_url
 from src.validators import validate_goodreads_profile_url, extract_user_id_from_url
 from src.logging_config import get_logger
@@ -62,11 +62,14 @@ class GoodreadsScraper:
     def scrape_library(self, profile_url: str) -> Library:
         """Scrape complete library from Goodreads profile.
 
+        Note: To get complete shelf information for each book, this method fetches
+        the review/view page for each book, which contains all shelves.
+
         Args:
             profile_url: Goodreads profile URL
 
         Returns:
-            Library object with all scraped data
+            Library object with all scraped data and complete shelf information
 
         Raises:
             InvalidURLError: If URL is not a valid Goodreads profile
@@ -91,10 +94,11 @@ class GoodreadsScraper:
         logger.info(
             "Starting library scrape",
             user_id=user_id,
-            profile_url=normalized_url
+            profile_url=normalized_url,
+            shelf=self.shelf
         )
 
-        # Scrape all pages
+        # Scrape library pages
         all_books = []
         page_num = 1
         # Extract username from URL as fallback
@@ -173,6 +177,45 @@ class GoodreadsScraper:
                     break
 
                 page_num += 1
+
+            # Fetch complete shelf data from review pages
+            logger.info("Fetching complete shelf data from review pages",
+                       total_books=len(all_books))
+
+            for i, book_data in enumerate(all_books, 1):
+                review_url = book_data.get('review_url')
+                if review_url:
+                    try:
+                        # Fetch review page
+                        review_html = self._fetch_with_retry(client, review_url)
+
+                        # Extract all shelves from review page
+                        shelves, reading_status = parse_review_page_shelves(review_html)
+
+                        # Update book data with complete shelf information
+                        book_data['shelves'] = shelves
+                        book_data['reading_status'] = reading_status
+
+                        if i % 10 == 0:
+                            logger.info("Fetched shelf data",
+                                       books_processed=i,
+                                       total_books=len(all_books))
+
+                        # Progress callback
+                        if self.progress_callback:
+                            self.progress_callback(
+                                i,
+                                len(all_books),
+                                f"Fetching shelf data: {i}/{len(all_books)} books"
+                            )
+
+                    except Exception as e:
+                        logger.warning("Failed to fetch shelf data for book",
+                                      book_id=book_data.get('goodreads_id'),
+                                      review_url=review_url,
+                                      error=str(e))
+                        # Keep the basic shelf data from the library page
+                        pass
 
         # Convert raw book data to models
         user_books = self._convert_to_models(all_books)

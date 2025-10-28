@@ -55,7 +55,7 @@ def test_pagination_detects_multiple_pages(mock_page1_html):
     When: Parser examines the HTML
     Then: Pagination is detected correctly
     """
-    from parse.src.scrapers.pagination import detect_pagination
+    from src.scrapers.pagination import detect_pagination
 
     has_next_page = detect_pagination(mock_page1_html)
     assert has_next_page is True, "Should detect next page link"
@@ -70,7 +70,7 @@ def test_pagination_extracts_next_page_url(mock_page1_html):
     When: Parser extracts pagination URL
     Then: Correct next page URL is returned
     """
-    from parse.src.scrapers.pagination import get_next_page_url
+    from src.scrapers.pagination import get_next_page_url
 
     next_url = get_next_page_url(mock_page1_html, base_url="https://www.goodreads.com/review/list/12345")
     assert next_url is not None
@@ -86,7 +86,7 @@ def test_scrape_library_handles_pagination(mock_page1_html, mock_page2_html):
     When: Scraper processes all pages
     Then: Books from all pages are collected
     """
-    from parse.src.lib.api import scrape_library
+    from src.lib.api import scrape_library
 
     with patch('httpx.Client') as mock_client:
         # Mock responses for page 1 and page 2
@@ -112,7 +112,7 @@ def test_pagination_respects_rate_limiting():
     Then: Requests are rate-limited even across pagination
     """
     import time
-    from parse.src.lib.api import scrape_library
+    from src.lib.api import scrape_library
 
     request_times = []
 
@@ -147,7 +147,7 @@ def test_large_library_pagination_500_plus_books():
     When: Scraper processes all pages
     Then: All books are retrieved without data loss
     """
-    from parse.src.lib.api import scrape_library
+    from src.lib.api import scrape_library
 
     # Mock 25 pages with 20 books each = 500 total
     def mock_page_response(url, *args, **kwargs):
@@ -192,7 +192,7 @@ def test_pagination_stops_at_last_page(mock_page2_html):
     When: Scraper checks for pagination
     Then: Scraping stops (no infinite pagination loop)
     """
-    from parse.src.scrapers.pagination import detect_pagination
+    from src.scrapers.pagination import detect_pagination
 
     has_next_page = detect_pagination(mock_page2_html)
     assert has_next_page is False, "Should detect when there's no next page"
@@ -207,7 +207,7 @@ def test_pagination_progress_callback():
     When: Scraper processes pages
     Then: Callback receives page progress updates
     """
-    from parse.src.lib.api import scrape_library
+    from src.lib.api import scrape_library
 
     progress_updates = []
 

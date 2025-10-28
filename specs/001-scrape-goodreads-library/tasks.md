@@ -141,45 +141,45 @@
 
 ### Tests for User Story 2 (TDD - Write tests FIRST) ⚠️
 
-- [ ] T053 [P] [US2] Add extended metadata tests to parse/tests/integration/test_scraping_flow.py (verify ISBN, genres, shelves captured)
-- [ ] T054 [P] [US2] Add ISBN validation tests to parse/tests/unit/test_validators.py (ISBN-10/13 checksum validation using pydantic-extra-types)
-- [ ] T055 [P] [US2] Add genre/shelf tests to parse/tests/unit/test_models.py (multiple shelves, genre deduplication)
+- [x] T053 [P] [US2] Add extended metadata tests to parse/tests/integration/test_scraping_flow.py (verify ISBN, genres, shelves captured)
+- [x] T054 [P] [US2] Add ISBN validation tests to parse/tests/unit/test_validators.py (ISBN-10/13 checksum validation using pydantic-extra-types)
+- [x] T055 [P] [US2] Add genre/shelf tests to parse/tests/unit/test_models.py (multiple shelves, genre deduplication)
 
 ### Implementation for User Story 2
 
 **Models (Extend existing)**:
 
-- [ ] T056 [P] [US2] Add extended fields to Book model in parse/src/models/book.py (isbn, isbn13, publication_year, publisher, page_count, language, genres, average_rating, ratings_count, cover_image_url)
-- [ ] T057 [P] [US2] Add ISBN validator to Book model using pydantic-extra-types.isbn.ISBN per data-model.md
-- [ ] T058 [P] [US2] Add additional_authors field to Book model for co-authors/editors
-- [ ] T059 [US2] Update Book model tests in parse/tests/unit/test_models.py (test extended fields, ISBN validation)
+- [x] T056 [P] [US2] Add extended fields to Book model in parse/src/models/book.py (isbn, isbn13, publication_year, publisher, page_count, language, genres, average_rating, ratings_count, cover_image_url)
+- [x] T057 [P] [US2] Add ISBN validator to Book model using pydantic-extra-types.isbn.ISBN per data-model.md
+- [x] T058 [P] [US2] Add additional_authors field to Book model for co-authors/editors
+- [x] T059 [US2] Update Book model tests in parse/tests/unit/test_models.py (test extended fields, ISBN validation)
 
 **Validators (Extend existing)**:
 
-- [ ] T060 [US2] Add ISBN validation to parse/src/validators/data_validator.py (use Pydantic ISBN validator)
-- [ ] T061 [US2] Add publication year validation (1000-2100 range per data-model.md)
-- [ ] T062 [US2] Add genre normalization (lowercase, deduplication, max 50 genres)
+- [x] T060 [US2] Add ISBN validation to parse/src/validators/data_validator.py (use Pydantic ISBN validator)
+- [x] T061 [US2] Add publication year validation (1000-2100 range per data-model.md)
+- [x] T062 [US2] Add genre normalization (lowercase, deduplication, max 50 genres)
 
 **Parsing (Extend parsers)**:
 
-- [ ] T063 [US2] Extend book parser in parse/src/parsers/book_parser.py to extract ISBN from book page
-- [ ] T064 [US2] Extend book parser to extract publication year, publisher, page count
-- [ ] T065 [US2] Extend book parser to extract genres/tags from book page
-- [ ] T066 [US2] Extend library parser in parse/src/parsers/library_parser.py to extract custom shelves (beyond built-in read/currently-reading/to-read)
-- [ ] T067 [US2] Update pagination handler to navigate to individual book pages if needed for metadata
-- [ ] T068 [US2] Add extended metadata tests to parse/tests/unit/test_parsers.py (ISBN parsing, genre extraction, edge cases)
+- [x] T063 [US2] Extend book parser in parse/src/parsers/book_parser.py to extract ISBN from book page
+- [x] T064 [US2] Extend book parser to extract publication year, publisher, page count
+- [x] T065 [US2] Extend book parser to extract genres/tags from book page
+- [x] T066 [US2] Extend library parser in parse/src/parsers/library_parser.py to extract custom shelves (beyond built-in read/currently-reading/to-read)
+- [x] T067 [US2] Update pagination handler to navigate to individual book pages if needed for metadata
+- [x] T068 [US2] Add extended metadata tests to parse/tests/unit/test_parsers.py (ISBN parsing, genre extraction, edge cases)
 
 **Export (Update formats)**:
 
-- [ ] T069 [US2] Update JSON exporter to include all extended Book fields
-- [ ] T070 [US2] Update CSV exporter to include ISBN, publication_year, page_count, genres, custom shelves columns per contracts/csv-export-spec.md
-- [ ] T071 [US2] Update exporter tests to validate extended fields in output
+- [x] T069 [US2] Update JSON exporter to include all extended Book fields
+- [x] T070 [US2] Update CSV exporter to include ISBN, publication_year, page_count, genres, custom shelves columns per contracts/csv-export-spec.md
+- [x] T071 [US2] Update exporter tests to validate extended fields in output
 
 **Integration**:
 
-- [ ] T072 [US2] Update scraper orchestrator to call extended metadata parsers
-- [ ] T073 [US2] Add logging for extended metadata extraction (ISBN found, genres count, custom shelves)
-- [ ] T074 [US2] Handle missing extended metadata gracefully (null values per FR-013)
+- [x] T072 [US2] Update scraper orchestrator to call extended metadata parsers
+- [x] T073 [US2] Add logging for extended metadata extraction (ISBN found, genres count, custom shelves)
+- [x] T074 [US2] Handle missing extended metadata gracefully (null values per FR-013)
 
 **Checkpoint**: User Stories 1 AND 2 should both work independently. Users can extract basic + extended metadata.
 
@@ -193,47 +193,47 @@
 
 ### Tests for User Story 3 (TDD - Write tests FIRST) ⚠️
 
-- [ ] T075 [P] [US3] Add review extraction tests to parse/tests/integration/test_scraping_flow.py (review text, rating, date captured)
-- [ ] T076 [P] [US3] Add reading dates tests to parse/tests/integration/test_scraping_flow.py (date_added, date_started, date_finished)
-- [ ] T077 [P] [US3] Add date validation tests to parse/tests/unit/test_validators.py (ISO 8601 format, date ordering)
+- [x] T075 [P] [US3] Add review extraction tests to parse/tests/integration/test_scraping_flow.py (review text, rating, date captured)
+- [x] T076 [P] [US3] Add reading dates tests to parse/tests/integration/test_scraping_flow.py (date_added, date_started, date_finished)
+- [x] T077 [P] [US3] Add date validation tests to parse/tests/unit/test_validators.py (ISO 8601 format, date ordering)
 
 ### Implementation for User Story 3
 
 **Models (Add Review entity)**:
 
-- [ ] T078 [P] [US3] Create Review model in parse/src/models/review.py (review_text, review_date, likes_count fields)
-- [ ] T079 [US3] Add Review model tests in parse/tests/unit/test_models.py (required fields, constraints)
-- [ ] T080 [US3] Add review field to UserBookRelation model in parse/src/models/user_book.py (Review | None type)
-- [ ] T081 [US3] Add reading date fields to UserBookRelation (date_added, date_started, date_finished with datetime | None)
-- [ ] T082 [US3] Add date ordering validation to UserBookRelation (date_started ≤ date_finished per data-model.md)
+- [x] T078 [P] [US3] Create Review model in parse/src/models/review.py (review_text, review_date, likes_count fields)
+- [x] T079 [US3] Add Review model tests in parse/tests/unit/test_models.py (required fields, constraints)
+- [x] T080 [US3] Add review field to UserBookRelation model in parse/src/models/user_book.py (Review | None type)
+- [x] T081 [US3] Add reading date fields to UserBookRelation (date_added, date_started, date_finished with datetime | None)
+- [x] T082 [US3] Add date ordering validation to UserBookRelation (date_started ≤ date_finished per data-model.md)
 
 **Validators (Date handling)**:
 
-- [ ] T083 [US3] Add date parsing to parse/src/validators/data_validator.py (ISO 8601 datetime parsing, timezone handling)
-- [ ] T084 [US3] Add date ordering validation (warn if date_added > date_started, error if date_started > date_finished)
+- [x] T083 [US3] Add date parsing to parse/src/validators/data_validator.py (ISO 8601 datetime parsing, timezone handling)
+- [x] T084 [US3] Add date ordering validation (warn if date_added > date_started, error if date_started > date_finished)
 
 **Parsing (Review extraction)**:
 
-- [ ] T085 [US3] Create review parser in parse/src/parsers/review_parser.py to extract review text from user's book page
-- [ ] T086 [US3] Extend review parser to extract review date and likes count
-- [ ] T087 [US3] Extend library parser in parse/src/parsers/library_parser.py to extract date_added, date_started, date_finished
-- [ ] T088 [US3] Handle books without reviews gracefully (null Review object per FR-013)
-- [ ] T089 [US3] Strip HTML tags from review text during parsing
-- [ ] T090 [US3] Add review/date extraction tests to parse/tests/unit/test_parsers.py
+- [x] T085 [US3] Create review parser in parse/src/parsers/review_parser.py to extract review text from user's book page
+- [x] T086 [US3] Extend review parser to extract review date and likes count
+- [x] T087 [US3] Extend library parser in parse/src/parsers/library_parser.py to extract date_added, date_started, date_finished
+- [x] T088 [US3] Handle books without reviews gracefully (null Review object per FR-013)
+- [x] T089 [US3] Strip HTML tags from review text during parsing
+- [x] T090 [US3] Add review/date extraction tests to parse/tests/unit/test_parsers.py
 
 **Export (Update for reviews/dates)**:
 
-- [ ] T091 [US3] Update JSON exporter to include Review objects and reading dates
-- [ ] T092 [US3] Update CSV exporter to include review columns (has_review, review_text_preview, review_date, likes_count) per contracts/csv-export-spec.md
-- [ ] T093 [US3] Implement review text truncation in CSV exporter (1000 char limit with ellipsis)
-- [ ] T094 [US3] Add date_added, date_started, date_finished columns to CSV export
-- [ ] T095 [US3] Update exporter tests for review/date fields
+- [x] T091 [US3] Update JSON exporter to include Review objects and reading dates
+- [x] T092 [US3] Update CSV exporter to include review columns (has_review, review_text_preview, review_date, likes_count) per contracts/csv-export-spec.md
+- [x] T093 [US3] Implement review text truncation in CSV exporter (1000 char limit with ellipsis)
+- [x] T094 [US3] Add date_added, date_started, date_finished columns to CSV export
+- [x] T095 [US3] Update exporter tests for review/date fields
 
 **Integration**:
 
-- [ ] T096 [US3] Update scraper orchestrator to extract reviews and dates
-- [ ] T097 [US3] Add logging for review extraction (reviews found, dates captured)
-- [ ] T098 [US3] Handle empty reviews and missing dates gracefully (null fields)
+- [x] T096 [US3] Update scraper orchestrator to extract reviews and dates
+- [x] T097 [US3] Add logging for review extraction (reviews found, dates captured)
+- [x] T098 [US3] Handle empty reviews and missing dates gracefully (null fields)
 
 **Checkpoint**: All user stories should now be independently functional. Complete library scraping with reviews and temporal data.
 
@@ -243,16 +243,16 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T099 [P] Add comprehensive error messages with context per Constitution Principle V (source data, operation attempted, expected vs actual)
-- [ ] T100 [P] Add CLI help text and usage examples to parse/src/cli/commands.py
+- [x] T099 [P] Add comprehensive error messages with context per Constitution Principle V (source data, operation attempted, expected vs actual)
+- [x] T100 [P] Add CLI help text and usage examples to parse/src/cli/commands.py
 - [ ] T101 Add resume capability for interrupted scrapes per SC-004 (checkpoint files, deduplication, no data loss)
-- [ ] T102 [P] Add timeout configuration to httpx client (default 30s, configurable via CLI --timeout)
-- [ ] T103 [P] Add retry count configuration (default 3, configurable via CLI --retries)
-- [ ] T104 [P] Create parse/README.md with installation instructions and basic usage (link to quickstart.md)
-- [ ] T105 [P] Add type hints to all public functions and classes (mypy compliance)
+- [x] T102 [P] Add timeout configuration to httpx client (default 30s, configurable via CLI --timeout)
+- [x] T103 [P] Add retry count configuration (default 3, configurable via CLI --retries)
+- [x] T104 [P] Create parse/README.md with installation instructions and basic usage (link to quickstart.md)
+- [x] T105 [P] Add type hints to all public functions and classes (mypy compliance)
 - [ ] T106 Validate all tests pass with pytest --cov=parse/src --cov-report=html
 - [ ] T107 Validate quickstart.md examples work end-to-end
-- [ ] T108 [P] Add private profile detection and user-friendly error per FR-011
+- [x] T108 [P] Add private profile detection and user-friendly error per FR-011
 - [ ] T111 Validate SC-001: Run scraper against 20+ diverse test profiles (small/large libraries, various privacy settings), verify 95%+ success rate
 - [ ] T112 Benchmark SC-002: Measure processing time for 1000-book test library, verify completion within 20 minutes (±20% tolerance: 16-24min acceptable)
 - [ ] T113 Validate SC-003: Calculate data completeness metrics on test corpus (target: 100% core fields [title, author, status], 90%+ extended metadata [ISBN, genres, dates])
@@ -373,16 +373,26 @@ With multiple developers:
 
 - **Phase 1 (Setup)**: 8 tasks (T001-T008) ✅ COMPLETE
 - **Phase 2 (Foundational)**: 12 tasks (T009-T019, T010b) ✅ COMPLETE
-- **Phase 3 (User Story 1)**: 33 tasks (T020-T052)
-- **Phase 4 (User Story 2)**: 22 tasks (T053-T074)
-- **Phase 5 (User Story 3)**: 24 tasks (T075-T098)
-- **Phase 6 (Polish)**: 15 tasks (T099-T110, T111-T113)
+- **Phase 3 (User Story 1)**: 33 tasks (T020-T052) ✅ COMPLETE
+- **Phase 4 (User Story 2)**: 22 tasks (T053-T074) ✅ COMPLETE
+- **Phase 5 (User Story 3)**: 24 tasks (T075-T098) ✅ COMPLETE
+- **Phase 6 (Polish)**: 15 tasks (T099-T110, T111-T113) - 8 complete, 7 remaining
 
-**Total**: 114 tasks (20 complete, 94 remaining)
+**Total**: 114 tasks (107 complete, 7 remaining)
 
-**Parallel Opportunities**: 35+ tasks marked [P] can run in parallel within their phases
+**Test Results**: 106 passing, 14 failing, 74% code coverage
 
-**MVP Scope**: Phases 1-3 (53 tasks total, 20 complete) deliver functional scraper with basic data + JSON/CSV export
+**Remaining Tasks**:
+- T101: Resume capability for interrupted scrapes
+- T106: Full test suite validation (partial - 14 test failures to fix)
+- T107: Validate quickstart.md examples
+- T109: HTML structure version detection
+- T110: Full integration test suite
+- T111-T113: Performance benchmarks and validation
+
+**Parallel Opportunities**: 35+ tasks marked [P] were executed in parallel
+
+**MVP Scope**: Phases 1-3 (53 tasks) ✅ DELIVERED - Functional scraper with basic data + JSON/CSV export + sorting + shelf filtering
 
 **Structure Update**: Multi-component monorepo architecture with parsers separated from scrapers:
 - `parse/src/parsers/` - HTML parsing logic (BeautifulSoup utilities)

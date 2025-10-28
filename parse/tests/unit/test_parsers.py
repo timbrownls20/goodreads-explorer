@@ -7,7 +7,7 @@ Per Constitution Principle III: TDD with parser testing.
 import pytest
 from bs4 import BeautifulSoup
 
-from parse.src.parsers import (
+from src.parsers import (
     detect_next_page,
     extract_books_from_table,
     parse_library_page,
@@ -152,7 +152,7 @@ class TestLibraryParser:
         soup = BeautifulSoup(html, 'lxml')
         cell = soup.find('td')
 
-        from parse.src.parsers.library_parser import extract_rating_from_cell
+        from src.parsers.library_parser import extract_rating_from_cell
         rating = extract_rating_from_cell(cell)
         assert rating == 5
 
@@ -167,7 +167,7 @@ class TestLibraryParser:
         soup = BeautifulSoup(html, 'lxml')
         cell = soup.find('td')
 
-        from parse.src.parsers.library_parser import extract_shelves_from_cell
+        from src.parsers.library_parser import extract_shelves_from_cell
         shelves, status = extract_shelves_from_cell(cell)
 
         assert 'read' in shelves
@@ -196,7 +196,7 @@ class TestBookParser:
 
     def test_parse_book_page_extracts_metadata(self, sample_book_html):
         """Test that book page metadata is extracted."""
-        from parse.src.parsers import parse_book_page
+        from src.parsers import parse_book_page
 
         result = parse_book_page(sample_book_html)
 

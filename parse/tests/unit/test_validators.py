@@ -7,8 +7,8 @@ Per Constitution Principle III: TDD with comprehensive validation testing.
 from datetime import datetime
 import pytest
 
-from parse.src.exceptions import InvalidURLError, ValidationError
-from parse.src.validators import (
+from src.exceptions import InvalidURLError, ValidationError
+from src.validators import (
     extract_user_id_from_url,
     is_goodreads_book_url,
     normalize_genres,

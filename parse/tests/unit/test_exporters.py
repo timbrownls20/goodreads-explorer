@@ -10,8 +10,8 @@ from pathlib import Path
 import pytest
 import tempfile
 
-from parse.src.models import Book, Library, ReadingStatus, Shelf, UserBookRelation
-from parse.src.exporters import (
+from src.models import Book, Library, ReadingStatus, Shelf, UserBookRelation
+from src.exporters import (
     export_to_json,
     export_to_csv,
     library_to_json_dict,
@@ -166,7 +166,7 @@ class TestCSVExporter:
 
     def test_csv_review_truncation(self):
         """Test that review text is truncated to 1000 chars."""
-        from parse.src.exporters.csv_exporter import _truncate_review
+        from src.exporters.csv_exporter import _truncate_review
 
         long_review = "A" * 1500
         truncated = _truncate_review(long_review)

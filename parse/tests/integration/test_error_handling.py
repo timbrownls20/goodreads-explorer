@@ -18,8 +18,8 @@ def test_invalid_url_raises_error():
     When: User attempts to scrape
     Then: InvalidURLError is raised with clear message
     """
-    from parse.src.lib.api import scrape_library
-    from parse.src.exceptions import InvalidURLError
+    from src.lib.api import scrape_library
+    from src.exceptions import InvalidURLError
 
     invalid_urls = [
         "not-a-url",
@@ -45,8 +45,8 @@ def test_network_error_with_retry():
     When: Scraper makes request
     Then: Retries with exponential backoff before failing
     """
-    from parse.src.lib.api import scrape_library
-    from parse.src.exceptions import NetworkError
+    from src.lib.api import scrape_library
+    from src.exceptions import NetworkError
 
     attempt_count = [0]
 
@@ -79,8 +79,8 @@ def test_network_error_max_retries_exceeded():
     When: All retry attempts exhausted
     Then: NetworkError is raised with context
     """
-    from parse.src.lib.api import scrape_library
-    from parse.src.exceptions import NetworkError
+    from src.lib.api import scrape_library
+    from src.exceptions import NetworkError
 
     def always_fail(*args, **kwargs):
         raise httpx.ConnectError("Network unreachable")
@@ -103,8 +103,8 @@ def test_timeout_error_handling():
     When: Scraper waits for response
     Then: TimeoutError is caught and retried or raises NetworkError
     """
-    from parse.src.lib.api import scrape_library
-    from parse.src.exceptions import NetworkError
+    from src.lib.api import scrape_library
+    from src.exceptions import NetworkError
 
     def timeout_request(*args, **kwargs):
         raise httpx.TimeoutException("Request timed out")
@@ -125,8 +125,8 @@ def test_private_profile_detection():
     When: Scraper attempts to access library
     Then: PrivateProfileError is raised with user-friendly message
     """
-    from parse.src.lib.api import scrape_library
-    from parse.src.exceptions import PrivateProfileError
+    from src.lib.api import scrape_library
+    from src.exceptions import PrivateProfileError
 
     # Mock HTML for a private profile page
     private_profile_html = """
@@ -158,8 +158,8 @@ def test_http_404_profile_not_found():
     When: Scraper makes request
     Then: Appropriate error is raised
     """
-    from parse.src.lib.api import scrape_library
-    from parse.src.exceptions import InvalidURLError
+    from src.lib.api import scrape_library
+    from src.exceptions import InvalidURLError
 
     with patch('httpx.Client') as mock_client:
         mock_response = Mock()
@@ -180,8 +180,8 @@ def test_http_500_server_error():
     When: Scraper makes request
     Then: NetworkError is raised after retries
     """
-    from parse.src.lib.api import scrape_library
-    from parse.src.exceptions import NetworkError
+    from src.lib.api import scrape_library
+    from src.exceptions import NetworkError
 
     with patch('httpx.Client') as mock_client:
         mock_response = Mock()
@@ -202,7 +202,7 @@ def test_empty_library_no_error():
     When: Scraper processes the profile
     Then: Empty Library object returned (no exception)
     """
-    from parse.src.lib.api import scrape_library
+    from src.lib.api import scrape_library
 
     empty_library_html = """
     <html><body>
@@ -233,7 +233,7 @@ def test_malformed_html_graceful_handling():
     When: Parser processes the HTML
     Then: Valid books are extracted, invalid ones skipped with logging
     """
-    from parse.src.lib.api import scrape_library
+    from src.lib.api import scrape_library
 
     malformed_html = """
     <html><body>
@@ -281,7 +281,7 @@ def test_missing_metadata_fields_handled():
     When: Parser extracts book data
     Then: Missing fields are set to None, book still extracted
     """
-    from parse.src.lib.api import scrape_library
+    from src.lib.api import scrape_library
 
     minimal_book_html = """
     <html><body>
@@ -325,8 +325,8 @@ def test_rate_limit_error_detection():
     When: Scraper receives the response
     Then: RateLimitError is raised with backoff recommendation
     """
-    from parse.src.lib.api import scrape_library
-    from parse.src.exceptions import RateLimitError
+    from src.lib.api import scrape_library
+    from src.exceptions import RateLimitError
 
     with patch('httpx.Client') as mock_client:
         mock_response = Mock()
@@ -349,8 +349,8 @@ def test_error_messages_include_context():
     When: Exception is raised
     Then: Error message includes source data, operation, expected vs actual
     """
-    from parse.src.lib.api import scrape_library
-    from parse.src.exceptions import InvalidURLError
+    from src.lib.api import scrape_library
+    from src.exceptions import InvalidURLError
 
     try:
         scrape_library("https://example.com/not-goodreads")

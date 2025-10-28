@@ -56,6 +56,10 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+markers = [
+    "integration: Integration tests that may require network access",
+    "slow: Slow tests that should be run separately",
+]
 addopts = [
     "--strict-markers",
     "--strict-config",
