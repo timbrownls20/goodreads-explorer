@@ -4,7 +4,7 @@ Exports URL validation and data validation functions.
 Per Constitution Principle VI: Data Quality & Validation.
 """
 
-from parse.src.validators.data_validator import (
+from src.validators.data_validator import (
     normalize_genres,
     parse_iso_date,
     sanitize_text,
@@ -14,7 +14,7 @@ from parse.src.validators.data_validator import (
     validate_publication_year,
     validate_rating,
 )
-from parse.src.validators.url_validator import (
+from src.validators.url_validator import (
     extract_user_id_from_url,
     is_goodreads_book_url,
     normalize_profile_url,

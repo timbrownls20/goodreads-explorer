@@ -12,27 +12,50 @@ This quickstart guide demonstrates how to use the Goodreads library scraper to e
 
 ### Prerequisites
 
-- Python 3.10 or higher (Python 3.12 recommended)
+- Python 3.10 or higher (Python 3.13 recommended)
 - pip package manager
 - Internet connection for scraping Goodreads
 
-### Install Dependencies
+### Setup Virtual Environment
+
+It's recommended to use a virtual environment to avoid conflicts with system packages:
 
 ```bash
-# Install core dependencies
-pip3 install beautifulsoup4 lxml httpx pydantic pydantic-extra-types
+# Navigate to the parse directory
+cd goodreads-explorer/parse
 
-# Install development dependencies (for testing)
-pip3 install pytest pytest-asyncio pytest-cov pytest-mock
+# Create a virtual environment
+python3 -m venv goodreads
+
+# Activate the virtual environment
+source goodreads/bin/activate  # On macOS/Linux
+# OR
+goodreads\Scripts\activate     # On Windows
 ```
 
-Or using a requirements file:
+### Install the Package
 
 ```bash
-pip3 install -r requirements.txt
+# Install in editable mode with all dependencies
+pip3 install -e .
+
+# Or install with development dependencies
+pip3 install -e ".[dev]"
 ```
+
+This will install:
+- Core dependencies (beautifulsoup4, lxml, httpx, pydantic, etc.)
+- The `goodreads-explorer` CLI command
+- Development tools (pytest, mypy, ruff) if using `[dev]`
 
 ## Basic Usage
+
+**Note**: Make sure your virtual environment is activated before running commands:
+```bash
+source goodreads/bin/activate  # On macOS/Linux
+# OR
+goodreads\Scripts\activate     # On Windows
+```
 
 ### CLI Interface
 
@@ -40,16 +63,16 @@ pip3 install -r requirements.txt
 
 ```bash
 # Scrape library and export to JSON
-python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown
+goodreads-explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown
 
 # Scrape and specify output format
-python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown --format json
+goodreads-explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown --format json
 
 # Scrape and export to CSV
-python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown --format csv
+goodreads-explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown --format csv
 
 # Scrape and export to both JSON and CSV
-python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown --format all
+goodreads-explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown --format all
 ```
 
 **Output**:
@@ -64,18 +87,23 @@ Progress: [████████████████████] 100% | 
 
 ```bash
 # Save exports to custom directory
-python3 -m goodreads_explorer scrape \
+goodreads-explorer scrape \
   https://www.goodreads.com/user/show/172435467-tim-brown \
-  --output-dir ./exports/
+  --output ./exports/tim-brown_library.json
 ```
 
-#### 3. Resume Interrupted Scrape
+#### 3. Advanced Options
 
 ```bash
-# Resume from checkpoint if scraping was interrupted
-python3 -m goodreads_explorer scrape \
+# Use rate limiting (slower scraping to be more respectful)
+goodreads-explorer scrape \
   https://www.goodreads.com/user/show/172435467-tim-brown \
-  --resume
+  --rate-limit 2.0
+
+# Increase timeout and retries for slow connections
+goodreads-explorer scrape \
+  https://www.goodreads.com/user/show/172435467-tim-brown \
+  --timeout 60 --max-retries 5
 ```
 
 ### Library/Programmatic Interface
@@ -249,10 +277,10 @@ See [contracts/csv-export-spec.md](./contracts/csv-export-spec.md) for detailed 
 
 ```bash
 # Create JSON backup
-python3 -m goodreads_explorer scrape \
+goodreads-explorer scrape \
   https://www.goodreads.com/user/show/172435467-tim-brown \
   --format json \
-  --output-dir ./backups/
+  --output ./backups/tim-brown_library.json
 ```
 
 ### 2. Analyze Reading Patterns
@@ -289,7 +317,7 @@ print(f"Top 5 genres: {genre_counter.most_common(5)}")
 
 ```bash
 # Export to CSV for Excel
-python3 -m goodreads_explorer scrape \
+goodreads-explorer scrape \
   https://www.goodreads.com/user/show/172435467-tim-brown \
   --format csv
 
@@ -327,11 +355,12 @@ for ub in reread_candidates[:10]:
 
 ## Rate Limiting
 
-The scraper respects Goodreads rate limiting (1 request/second) automatically:
+The scraper respects Goodreads servers with conservative rate limiting (default: 1 request/second):
 
-- **Large libraries**: 500 books = ~8 minutes, 1000 books = ~17 minutes
-- **Progress indication**: Real-time progress bar shows ETA
-- **Resume capability**: Interrupted scrapes can resume from last checkpoint
+- **Large libraries**: 500 books = ~8-10 minutes, 1000 books = ~17-20 minutes
+- **Progress indication**: Real-time progress bar shows current book and estimated completion
+- **Adjustable rate**: Use `--rate-limit 2.0` to slow down to 1 request every 2 seconds
+- **Best practice**: If scraping multiple profiles, add delays between runs
 
 ## Data Validation
 
@@ -349,15 +378,10 @@ Invalid data is logged with warnings but doesn't stop scraping.
 View detailed scraping logs:
 
 ```bash
-# Enable verbose logging
-python3 -m goodreads_explorer scrape \
+# Disable progress bar for logging to file
+goodreads-explorer scrape \
   https://www.goodreads.com/user/show/172435467-tim-brown \
-  --log-level DEBUG
-
-# Log to file
-python3 -m goodreads_explorer scrape \
-  https://www.goodreads.com/user/show/172435467-tim-brown \
-  --log-file scrape.log
+  --no-progress > scrape.log 2>&1
 ```
 
 Log output includes:
@@ -390,15 +414,10 @@ Log output includes:
 
 **Solutions**:
 ```bash
-# Increase timeout
-python3 -m goodreads_explorer scrape \
+# Increase timeout and retries
+goodreads-explorer scrape \
   https://www.goodreads.com/user/show/172435467-tim-brown \
-  --timeout 30
-
-# Enable retries
-python3 -m goodreads_explorer scrape \
-  https://www.goodreads.com/user/show/172435467-tim-brown \
-  --retries 3
+  --timeout 60 --max-retries 5
 ```
 
 ### Issue: Missing book metadata

@@ -8,12 +8,12 @@ import time
 from typing import Callable
 import httpx
 
-from parse.src.exceptions import InvalidURLError, NetworkError, PrivateProfileError, RateLimitError
-from parse.src.models import Library, UserBookRelation, Book, Shelf, ReadingStatus
-from parse.src.parsers import parse_library_page
-from parse.src.scrapers.pagination import detect_pagination, get_next_page_url, build_library_url
-from parse.src.validators import validate_goodreads_profile_url, extract_user_id_from_url
-from parse.src.logging_config import get_logger
+from src.exceptions import InvalidURLError, NetworkError, PrivateProfileError, RateLimitError
+from src.models import Library, UserBookRelation, Book, Shelf, ReadingStatus
+from src.parsers import parse_library_page
+from src.scrapers.pagination import detect_pagination, get_next_page_url, build_library_url
+from src.validators import validate_goodreads_profile_url, extract_user_id_from_url
+from src.logging_config import get_logger
 
 logger = get_logger(__name__)
 

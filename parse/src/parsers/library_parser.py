@@ -8,8 +8,8 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from typing import Any
 
-from parse.src.models import ReadingStatus, Shelf
-from parse.src.validators import parse_iso_date, sanitize_text
+from src.models import ReadingStatus, Shelf
+from src.validators import parse_iso_date, sanitize_text
 
 
 def parse_library_page(html: str) -> dict[str, Any]:

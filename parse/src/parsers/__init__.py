@@ -4,8 +4,8 @@ Exports library and book page parsers.
 Per Constitution Principle I: Data-First with clean parsing interfaces.
 """
 
-from parse.src.parsers.book_parser import parse_book_page
-from parse.src.parsers.library_parser import (
+from src.parsers.book_parser import parse_book_page
+from src.parsers.library_parser import (
     detect_next_page,
     extract_books_from_table,
     extract_user_metadata,

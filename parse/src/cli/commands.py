@@ -18,9 +18,9 @@ from rich.progress import (
     TimeRemainingColumn,
 )
 
-from parse.src.lib.api import scrape_library, scrape_and_export
-from parse.src.logging_config import get_logger
-from parse.src.exceptions import (
+from src.lib.api import scrape_library, scrape_and_export
+from src.logging_config import get_logger
+from src.exceptions import (
     InvalidURLError,
     PrivateProfileError,
     RateLimitError,
@@ -195,10 +195,10 @@ def scrape(
                 )
 
                 if format.lower() == "json":
-                    from parse.src.exporters import export_to_json
+                    from src.exporters import export_to_json
                     export_to_json(library, final_output)
                 elif format.lower() == "csv":
-                    from parse.src.exporters import export_to_csv
+                    from src.exporters import export_to_csv
                     export_to_csv(library, final_output)
 
                 progress.update(

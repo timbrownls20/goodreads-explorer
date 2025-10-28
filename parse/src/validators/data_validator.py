@@ -7,7 +7,7 @@ Per Constitution Principle VI: Data Quality & Validation.
 from datetime import datetime
 from typing import Any
 
-from parse.src.exceptions import ValidationError
+from src.exceptions import ValidationError
 
 
 def validate_rating(rating: int | None, field_name: str = "rating") -> int | None:

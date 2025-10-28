@@ -8,8 +8,8 @@ Per Constitution Principle I: Data-First Development with validation.
 from datetime import datetime
 from pydantic import BaseModel, Field, model_validator
 
-from parse.src.models.book import Book
-from parse.src.models.shelf import ReadingStatus, Shelf
+from src.models.book import Book
+from src.models.shelf import ReadingStatus, Shelf
 
 
 class Review(BaseModel):

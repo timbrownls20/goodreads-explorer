@@ -4,8 +4,8 @@ Exports scraper class and pagination utilities.
 Per Constitution Principle IV: Integration testing for external services.
 """
 
-from parse.src.scrapers.goodreads_scraper import GoodreadsScraper
-from parse.src.scrapers.pagination import (
+from src.scrapers.goodreads_scraper import GoodreadsScraper
+from src.scrapers.pagination import (
     build_library_url,
     detect_pagination,
     extract_page_number,

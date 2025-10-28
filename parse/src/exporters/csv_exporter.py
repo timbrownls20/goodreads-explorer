@@ -8,8 +8,8 @@ import csv
 from datetime import datetime
 from pathlib import Path
 
-from parse.src.models import Library
-from parse.src.logging_config import get_logger
+from src.models import Library
+from src.logging_config import get_logger
 
 logger = get_logger(__name__)
 

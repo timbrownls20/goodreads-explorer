@@ -7,7 +7,7 @@ Per Constitution Principle I: Data-First Development.
 from datetime import datetime
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
-from parse.src.models.user_book import UserBookRelation
+from src.models.user_book import UserBookRelation
 
 
 class Library(BaseModel):

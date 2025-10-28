@@ -7,7 +7,7 @@ Per Constitution Principle VI: Data Quality & Validation.
 import re
 from urllib.parse import urlparse
 
-from parse.src.exceptions import InvalidURLError
+from src.exceptions import InvalidURLError
 
 
 # Goodreads profile URL patterns

@@ -41,14 +41,15 @@ dev = [
 ]
 
 [project.scripts]
-goodreads-explorer = "parse.src.cli:main"
+goodreads-explorer = "src.cli:main"
 
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["src"]
+packages = {find = {}}
+package-dir = {"" = "."}
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

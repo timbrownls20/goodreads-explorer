@@ -8,7 +8,7 @@ Per Constitution Principle I: Data-First with extensible parsing.
 from bs4 import BeautifulSoup
 from typing import Any
 
-from parse.src.validators import sanitize_text, validate_isbn, validate_publication_year
+from src.validators import sanitize_text, validate_isbn, validate_publication_year
 
 
 def parse_book_page(html: str) -> dict[str, Any]:
