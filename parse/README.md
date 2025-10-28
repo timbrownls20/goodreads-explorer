@@ -21,29 +21,53 @@ parse/
 └── pyproject.toml      # Python project configuration
 ```
 
+## Requirements
+
+- **Python 3.10 or higher** (Python 3.13.6 recommended)
+- Use `python3` command (not `python`)
+
 ## Installation
 
 ```bash
 cd parse
-pip install -e ".[dev]"
+python3 -m pip install -e ".[dev]"
 ```
 
-## Usage
+## Quick Start
 
-See `specs/001-scrape-goodreads-library/quickstart.md` for detailed usage examples.
+**See [Quickstart Guide](../specs/001-scrape-goodreads-library/quickstart.md)** for detailed installation and usage examples.
+
+### Basic Usage
+
+```bash
+# Scrape a library and export to JSON
+goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username
+
+# Export to CSV
+goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username --format csv
+```
+
+### Library API
+
+```python
+from parse.src.lib import scrape_library
+
+library = scrape_library("https://www.goodreads.com/user/show/12345-username")
+print(f"Scraped {library.total_books} books for {library.username}")
+```
 
 ## Development
 
 ```bash
 # Run tests
-pytest
+python3 -m pytest
 
 # Run with coverage
-pytest --cov=src --cov-report=html
+python3 -m pytest --cov=src --cov-report=html
 
 # Type checking
-mypy src
+python3 -m mypy src
 
 # Linting
-ruff check src
+python3 -m ruff check src
 ```

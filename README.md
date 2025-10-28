@@ -46,10 +46,18 @@ goodreads-explorer/
 
 ## Getting Started
 
-See component-specific README files:
-- [Parse Component](./parse/README.md) - **Start here for current development**
+**Quick Start**: See [Parse Component Quickstart](./specs/001-scrape-goodreads-library/quickstart.md) for installation and usage examples.
+
+Component-specific documentation:
+- [Parse Component README](./parse/README.md) - **Start here for current development**
 - [UI Component](./ui/README.md) *(coming soon)*
 - [API Component](./api/README.md) *(coming soon)*
+
+## Requirements
+
+- **Python 3.10 or higher** (Python 3.13.6 recommended)
+  - Use `python3` command (not `python`)
+  - Install with: `python3 -m pip install -e parse/`
 
 ## Development Workflow
 
