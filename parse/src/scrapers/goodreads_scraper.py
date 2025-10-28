@@ -11,7 +11,7 @@ import httpx
 
 from src.exceptions import InvalidURLError, NetworkError, PrivateProfileError, RateLimitError
 from src.models import Library, UserBookRelation, Book, Shelf, ReadingStatus
-from src.parsers import parse_library_page, parse_review_page_shelves
+from src.parsers import parse_library_page, parse_review_page_shelves, parse_book_page
 from src.scrapers.pagination import detect_pagination, get_next_page_url, build_library_url
 from src.validators import validate_goodreads_profile_url, extract_user_id_from_url
 from src.logging_config import get_logger
@@ -109,7 +109,10 @@ class GoodreadsScraper:
             if '-' in url_username:
                 username = '-'.join(url_username.split('-')[1:]).split('?')[0].split('/')[0]
 
-        with httpx.Client(timeout=self.timeout) as client:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+        }
+        with httpx.Client(timeout=self.timeout, headers=headers) as client:
             while True:
                 # Build library URL for current page
                 library_url = build_library_url(normalized_url, page=page_num, shelf=self.shelf)
@@ -178,11 +181,12 @@ class GoodreadsScraper:
 
                 page_num += 1
 
-            # Fetch complete shelf data from review pages
-            logger.info("Fetching complete shelf data from review pages",
+            # Fetch complete data from review pages and book pages
+            logger.info("Fetching complete data from review and book pages",
                        total_books=len(all_books))
 
             for i, book_data in enumerate(all_books, 1):
+                # Fetch review page for shelf data
                 review_url = book_data.get('review_url')
                 if review_url:
                     try:
@@ -196,19 +200,6 @@ class GoodreadsScraper:
                         book_data['shelves'] = shelves
                         book_data['reading_status'] = reading_status
 
-                        if i % 10 == 0:
-                            logger.info("Fetched shelf data",
-                                       books_processed=i,
-                                       total_books=len(all_books))
-
-                        # Progress callback
-                        if self.progress_callback:
-                            self.progress_callback(
-                                i,
-                                len(all_books),
-                                f"Fetching shelf data: {i}/{len(all_books)} books"
-                            )
-
                     except Exception as e:
                         logger.warning("Failed to fetch shelf data for book",
                                       book_id=book_data.get('goodreads_id'),
@@ -216,6 +207,49 @@ class GoodreadsScraper:
                                       error=str(e))
                         # Keep the basic shelf data from the library page
                         pass
+
+                # Fetch book page for detailed metadata
+                book_url = book_data.get('goodreads_url')
+                logger.debug("Checking book URL", book_url=book_url)
+                if book_url:
+                    try:
+                        logger.debug("Fetching book page", book_url=book_url)
+                        # Fetch book page
+                        book_html = self._fetch_with_retry(client, book_url)
+
+                        # Extract detailed metadata
+                        detailed_data = parse_book_page(book_html)
+                        logger.debug("Parsed book metadata", detailed_data=detailed_data)
+
+                        # Update book data with detailed information
+                        # Only update if the field is not already set
+                        for key, value in detailed_data.items():
+                            if value is not None:
+                                book_data[key] = value
+                                logger.debug("Updated book_data field", key=key, value=str(value)[:50])
+
+                    except Exception as e:
+                        logger.warning("Failed to fetch book metadata",
+                                      book_id=book_data.get('goodreads_id'),
+                                      book_url=book_url,
+                                      error=str(e))
+                        # Keep the basic data from the library page
+                        pass
+                else:
+                    logger.warning("No book URL found for book", book_id=book_data.get('goodreads_id'))
+
+                if i % 10 == 0:
+                    logger.info("Fetched complete data",
+                               books_processed=i,
+                               total_books=len(all_books))
+
+                # Progress callback
+                if self.progress_callback:
+                    self.progress_callback(
+                        i,
+                        len(all_books),
+                        f"Fetching complete data: {i}/{len(all_books)} books"
+                    )
 
         # Convert raw book data to models
         user_books = self._convert_to_models(all_books)
@@ -357,12 +391,22 @@ class GoodreadsScraper:
 
         for raw_book in raw_books:
             try:
-                # Create Book model
+                # Create Book model with all available fields
                 book = Book(
                     goodreads_id=raw_book.get('goodreads_id', ''),
                     title=raw_book.get('title', ''),
                     author=raw_book.get('author', ''),
-                    goodreads_url=raw_book.get('goodreads_url', 'https://www.goodreads.com')
+                    goodreads_url=raw_book.get('goodreads_url', 'https://www.goodreads.com'),
+                    isbn=raw_book.get('isbn'),
+                    isbn13=raw_book.get('isbn13'),
+                    publication_year=raw_book.get('publication_year'),
+                    publisher=raw_book.get('publisher'),
+                    page_count=raw_book.get('page_count'),
+                    language=raw_book.get('language'),
+                    genres=raw_book.get('genres', []),
+                    average_rating=raw_book.get('average_rating'),
+                    ratings_count=raw_book.get('ratings_count'),
+                    cover_image_url=raw_book.get('cover_image_url')
                 )
 
                 # Create Shelf models

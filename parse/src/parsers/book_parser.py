@@ -31,6 +31,7 @@ def parse_book_page(html: str) -> dict[str, Any]:
         - language: Book language
         - average_rating: Goodreads community rating
         - ratings_count: Number of ratings
+        - cover_image_url: URL to book cover image
 
     Note:
         For MVP (User Story 1), this is primarily a stub.
@@ -55,6 +56,10 @@ def parse_book_page(html: str) -> dict[str, Any]:
     # Extract ratings (available on library page too, but more detailed here)
     rating_data = extract_rating_details(soup)
     book_data.update(rating_data)
+
+    # Extract cover image
+    cover_url = extract_cover_image(soup)
+    book_data['cover_image_url'] = cover_url
 
     return book_data
 
@@ -100,6 +105,8 @@ def extract_publication_details(soup: BeautifulSoup) -> dict[str, Any]:
     Returns:
         Dictionary with publication details
     """
+    import re
+
     pub_data = {
         "publication_year": None,
         "publisher": None,
@@ -107,14 +114,12 @@ def extract_publication_details(soup: BeautifulSoup) -> dict[str, Any]:
         "language": None
     }
 
-    # Look for publication details row
-    # Pattern: "Published YEAR by PUBLISHER"
-    details_row = soup.find('div', class_='row', string=lambda s: s and 'published' in s.lower())
-    if details_row:
-        text = details_row.get_text()
+    # Look for publication info with data-testid
+    pub_info = soup.find('p', {'data-testid': 'publicationInfo'})
+    if pub_info:
+        text = pub_info.get_text()
 
         # Extract year (4 digits)
-        import re
         year_match = re.search(r'\b(1[0-9]{3}|20[0-9]{2})\b', text)
         if year_match:
             try:
@@ -128,12 +133,11 @@ def extract_publication_details(soup: BeautifulSoup) -> dict[str, Any]:
             publisher = text.split(' by ')[-1].strip()
             pub_data['publisher'] = sanitize_text(publisher, max_length=200)
 
-    # Extract page count
-    # Pattern: "XXX pages"
-    pages_element = soup.find(string=lambda s: s and 'pages' in s.lower())
-    if pages_element:
-        import re
-        pages_match = re.search(r'(\d+)\s*pages', pages_element, re.IGNORECASE)
+    # Extract page count from pagesFormat
+    pages_elem = soup.find('p', {'data-testid': 'pagesFormat'})
+    if pages_elem:
+        text = pages_elem.get_text()
+        pages_match = re.search(r'(\d+)\s*pages', text, re.IGNORECASE)
         if pages_match:
             try:
                 pub_data['page_count'] = int(pages_match.group(1))
@@ -154,14 +158,13 @@ def extract_genres(soup: BeautifulSoup) -> list[str]:
     """
     genres = []
 
-    # Look for genre/shelf tags
-    # Goodreads typically shows popular shelves as genres
-    genre_elements = soup.find_all('a', class_='bookPageGenreLink')
+    # Look for genre buttons in the new Goodreads layout
+    genre_elements = soup.find_all('span', class_='BookPageMetadataSection__genreButton')
 
-    for element in genre_elements[:50]:  # Limit to 50 genres
+    for element in genre_elements[:20]:  # Limit to 20 genres
         genre_text = sanitize_text(element.get_text())
         if genre_text:
-            genres.append(genre_text.lower())
+            genres.append(genre_text)
 
     # Deduplicate
     return list(dict.fromkeys(genres))
@@ -176,27 +179,50 @@ def extract_rating_details(soup: BeautifulSoup) -> dict[str, Any]:
     Returns:
         Dictionary with rating details
     """
+    import re
+
     rating_data = {
         "average_rating": None,
         "ratings_count": None
     }
 
-    # Look for rating display
-    # Pattern: "<span>4.18</span> avg rating — <span>X</span> ratings"
-    rating_span = soup.find('span', itemprop='ratingValue')
-    if rating_span:
+    # Look for rating in RatingStatistics div
+    rating_div = soup.find('div', class_='RatingStatistics__rating')
+    if rating_div:
         try:
-            rating_data['average_rating'] = float(rating_span.get_text(strip=True))
+            rating_text = rating_div.get_text(strip=True)
+            rating_data['average_rating'] = float(rating_text)
         except (ValueError, AttributeError):
             pass
 
-    # Ratings count
-    count_span = soup.find('span', itemprop='ratingCount')
-    if count_span:
-        try:
-            count_text = count_span.get_text(strip=True).replace(',', '')
-            rating_data['ratings_count'] = int(count_text)
-        except (ValueError, AttributeError):
-            pass
+    # Ratings count in RatingStatistics__meta
+    meta_div = soup.find('div', class_='RatingStatistics__meta')
+    if meta_div:
+        text = meta_div.get_text()
+        # Extract numbers like "123,456 ratings"
+        count_match = re.search(r'([\d,]+)\s+ratings', text)
+        if count_match:
+            try:
+                count_text = count_match.group(1).replace(',', '')
+                rating_data['ratings_count'] = int(count_text)
+            except (ValueError, AttributeError):
+                pass
 
     return rating_data
+
+
+def extract_cover_image(soup: BeautifulSoup) -> str | None:
+    """Extract book cover image URL.
+
+    Args:
+        soup: BeautifulSoup parsed HTML
+
+    Returns:
+        Cover image URL or None
+    """
+    # Look for ResponsiveImage class (book cover)
+    img = soup.find('img', class_='ResponsiveImage')
+    if img and img.get('src'):
+        return img.get('src')
+
+    return None
