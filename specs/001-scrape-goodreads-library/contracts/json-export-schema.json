@@ -1,0 +1,244 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/goodreads-explorer/schemas/library-export/v1.0.0",
+  "title": "Goodreads Library Export",
+  "description": "JSON schema for exported Goodreads library data",
+  "type": "object",
+  "required": [
+    "user_id",
+    "username",
+    "profile_url",
+    "total_books",
+    "scraped_at",
+    "schema_version",
+    "user_books"
+  ],
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Goodreads user ID",
+      "minLength": 1
+    },
+    "username": {
+      "type": "string",
+      "description": "Goodreads username",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "profile_url": {
+      "type": "string",
+      "description": "User's Goodreads profile URL",
+      "format": "uri",
+      "pattern": "^https://www\\.goodreads\\.com/user/show/"
+    },
+    "total_books": {
+      "type": "integer",
+      "description": "Total count of books in library",
+      "minimum": 0
+    },
+    "scraped_at": {
+      "type": "string",
+      "description": "Timestamp of data extraction (ISO 8601)",
+      "format": "date-time"
+    },
+    "schema_version": {
+      "type": "string",
+      "description": "Data schema version (semantic versioning)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "user_books": {
+      "type": "array",
+      "description": "List of books in user's library with user-specific data",
+      "items": {
+        "$ref": "#/$defs/UserBookRelation"
+      }
+    }
+  },
+  "$defs": {
+    "UserBookRelation": {
+      "type": "object",
+      "required": ["book", "reading_status", "shelves"],
+      "properties": {
+        "book": {
+          "$ref": "#/$defs/Book"
+        },
+        "user_rating": {
+          "type": ["integer", "null"],
+          "description": "User's rating (1-5 stars)",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "reading_status": {
+          "type": "string",
+          "description": "Current reading status",
+          "enum": ["read", "currently-reading", "to-read"]
+        },
+        "shelves": {
+          "type": "array",
+          "description": "Shelves this book is on",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Shelf"
+          }
+        },
+        "review": {
+          "oneOf": [
+            {"$ref": "#/$defs/Review"},
+            {"type": "null"}
+          ]
+        },
+        "date_added": {
+          "type": ["string", "null"],
+          "description": "When book was added to library",
+          "format": "date-time"
+        },
+        "date_started": {
+          "type": ["string", "null"],
+          "description": "When user started reading",
+          "format": "date-time"
+        },
+        "date_finished": {
+          "type": ["string", "null"],
+          "description": "When user finished reading",
+          "format": "date-time"
+        }
+      }
+    },
+    "Book": {
+      "type": "object",
+      "required": ["goodreads_id", "title", "author", "goodreads_url"],
+      "properties": {
+        "goodreads_id": {
+          "type": "string",
+          "description": "Unique Goodreads book identifier",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "description": "Book title",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "author": {
+          "type": "string",
+          "description": "Primary author name",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "additional_authors": {
+          "type": "array",
+          "description": "Co-authors, editors, etc.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "isbn": {
+          "type": ["string", "null"],
+          "description": "ISBN-10 or ISBN-13",
+          "pattern": "^(\\d{10}|\\d{13}|\\d{3}-\\d{10})$"
+        },
+        "isbn13": {
+          "type": ["string", "null"],
+          "description": "ISBN-13 specifically",
+          "pattern": "^\\d{13}$"
+        },
+        "publication_year": {
+          "type": ["integer", "null"],
+          "description": "Year of publication",
+          "minimum": 1000,
+          "maximum": 2100
+        },
+        "publisher": {
+          "type": ["string", "null"],
+          "description": "Publisher name",
+          "maxLength": 200
+        },
+        "page_count": {
+          "type": ["integer", "null"],
+          "description": "Number of pages",
+          "minimum": 1
+        },
+        "language": {
+          "type": ["string", "null"],
+          "description": "Book language (ISO 639-1 code preferred)"
+        },
+        "genres": {
+          "type": "array",
+          "description": "Genre tags/categories",
+          "items": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "maxItems": 50,
+          "default": []
+        },
+        "average_rating": {
+          "type": ["number", "null"],
+          "description": "Goodreads community average rating",
+          "minimum": 0.0,
+          "maximum": 5.0
+        },
+        "ratings_count": {
+          "type": ["integer", "null"],
+          "description": "Number of ratings on Goodreads",
+          "minimum": 0
+        },
+        "cover_image_url": {
+          "type": ["string", "null"],
+          "description": "URL to cover image",
+          "format": "uri"
+        },
+        "goodreads_url": {
+          "type": "string",
+          "description": "Canonical Goodreads book page URL",
+          "format": "uri",
+          "pattern": "^https://www\\.goodreads\\.com/book/show/"
+        }
+      }
+    },
+    "Shelf": {
+      "type": "object",
+      "required": ["name", "is_builtin"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Shelf name (lowercased)",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "is_builtin": {
+          "type": "boolean",
+          "description": "Whether this is a Goodreads built-in shelf",
+          "default": false
+        },
+        "book_count": {
+          "type": ["integer", "null"],
+          "description": "Number of books on this shelf",
+          "minimum": 0
+        }
+      }
+    },
+    "Review": {
+      "type": "object",
+      "required": ["review_text"],
+      "properties": {
+        "review_text": {
+          "type": "string",
+          "description": "Full review text (HTML stripped)",
+          "maxLength": 50000
+        },
+        "review_date": {
+          "type": ["string", "null"],
+          "description": "When review was posted",
+          "format": "date-time"
+        },
+        "likes_count": {
+          "type": ["integer", "null"],
+          "description": "Number of likes on review",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
