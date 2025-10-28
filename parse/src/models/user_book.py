@@ -56,7 +56,7 @@ class UserBookRelation(BaseModel):
     book: Book = Field(description="The book entity")
     user_rating: int | None = Field(None, ge=1, le=5, description="User's 1-5 star rating")
     reading_status: ReadingStatus = Field(description="Current reading status")
-    shelves: list[Shelf] = Field(min_length=1, description="Shelves this book is on")
+    shelves: list[Shelf] = Field(min_length=1, max_length=100, description="Shelves this book is on")
     review: Review | None = Field(None, description="User's review if exists")
     date_added: datetime | None = Field(None, description="Date added to library")
     date_started: datetime | None = Field(None, description="Date started reading")
@@ -93,6 +93,9 @@ class UserBookRelation(BaseModel):
 
         Returns:
             Self with deduplicated shelves
+
+        Raises:
+            ValueError: If deduplication results in no shelves (shouldn't happen)
         """
         if not self.shelves:
             return self
@@ -106,7 +109,12 @@ class UserBookRelation(BaseModel):
                 unique_shelves.append(shelf)
                 seen_names.add(shelf_name_lower)
 
-        self.shelves = unique_shelves
+        # Ensure we still have at least one shelf after deduplication
+        if not unique_shelves:
+            raise ValueError("Book must have at least one shelf after deduplication")
+
+        # Use object.__setattr__ to avoid triggering validation during assignment
+        object.__setattr__(self, 'shelves', unique_shelves)
         return self
 
     class Config:

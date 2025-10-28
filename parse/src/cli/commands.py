@@ -4,6 +4,7 @@ Per Constitution Principle II: CLI as thin wrapper over library API.
 Uses Click framework for command-line interface with rich progress display.
 """
 
+from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
@@ -29,6 +30,37 @@ from src.exceptions import (
 
 logger = get_logger(__name__)
 console = Console()
+
+
+def sort_library_books(library, sort_by: str):
+    """Sort library books based on specified criteria.
+
+    Args:
+        library: Library object to sort
+        sort_by: Sort criterion (date-read, date-added, title, author, rating, none)
+
+    Returns:
+        Library with sorted user_books
+    """
+    if sort_by == "none":
+        return library
+
+    sort_key_map = {
+        "date-read": lambda ub: (ub.date_finished or datetime.min, ub.book.title),
+        "date-added": lambda ub: (ub.date_added or datetime.min, ub.book.title),
+        "title": lambda ub: ub.book.title.lower(),
+        "author": lambda ub: ub.book.author.lower(),
+        "rating": lambda ub: (ub.user_rating or 0, ub.book.title),
+    }
+
+    if sort_by not in sort_key_map:
+        return library
+
+    # Sort based on criterion (descending for dates and rating, ascending for text)
+    reverse = sort_by in ["date-read", "date-added", "rating"]
+    library.user_books.sort(key=sort_key_map[sort_by], reverse=reverse)
+
+    return library
 
 
 @click.group()
@@ -87,6 +119,24 @@ def cli():
     is_flag=True,
     help="Disable progress bar display",
 )
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Limit scraping to top N books (default: scrape all books)",
+)
+@click.option(
+    "--sort-by",
+    type=click.Choice(["date-read", "date-added", "title", "author", "rating", "none"], case_sensitive=False),
+    default="date-read",
+    help="Sort order for books (default: date-read, most recent first)",
+)
+@click.option(
+    "--shelf",
+    type=str,
+    default="all",
+    help="Shelf to scrape (default: all). Use 'read', 'currently-reading', 'to-read', or custom shelf name",
+)
 def scrape(
     profile_url: str,
     format: str,
@@ -95,6 +145,9 @@ def scrape(
     max_retries: int,
     timeout: int,
     no_progress: bool,
+    limit: int | None,
+    sort_by: str,
+    shelf: str,
 ):
     """Scrape a Goodreads user's library and export to JSON or CSV.
 
@@ -113,6 +166,11 @@ def scrape(
             --format csv --output my_library.csv
 
         \b
+        # Scrape only the first 50 books (for testing)
+        goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username \\
+            --limit 50
+
+        \b
         # Use slower rate limiting (2 seconds between requests)
         goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username \\
             --rate-limit 2.0
@@ -120,18 +178,30 @@ def scrape(
     try:
         # Create progress bar unless disabled
         if no_progress:
-            # No progress bar - just scrape and export
-            library = scrape_and_export(
+            # No progress bar - just scrape
+            library = scrape_library(
                 profile_url=profile_url,
-                output_format=format,
-                output_path=output or f"library.{format}",
                 rate_limit_delay=rate_limit,
                 max_retries=max_retries,
                 timeout=timeout,
+                limit=limit,
+                shelf=shelf,
             )
 
+            # Sort books based on user preference
+            library = sort_library_books(library, sort_by)
+
+            # Export
+            final_output = output or Path(f"{library.username}_library.{format}")
+            if format.lower() == "json":
+                from src.exporters import export_to_json
+                export_to_json(library, final_output)
+            elif format.lower() == "csv":
+                from src.exporters import export_to_csv
+                export_to_csv(library, final_output)
+
             console.print(f"[green]✓[/green] Scraped {library.total_books} books")
-            console.print(f"[green]✓[/green] Exported to: {output or f'library.{format}'}")
+            console.print(f"[green]✓[/green] Exported to: {final_output}")
 
         else:
             # Show progress bar
@@ -149,15 +219,23 @@ def scrape(
                 )
 
                 # Progress callback
-                current_page = [0]  # Use list for closure mutability
-                total_books = [0]
+                current_books = [0]  # Use list for closure mutability
+                pages_scraped = [0]
 
-                def on_progress(page: int, books_so_far: int) -> None:
-                    current_page[0] = page
-                    total_books[0] = books_so_far
+                def on_progress(current: int, total: int, message: str) -> None:
+                    """Progress callback matching scraper signature (current, total, message)."""
+                    current_books[0] = current
+                    # Extract page number from message like "Scraped page 2: 40 books so far"
+                    if "page" in message:
+                        try:
+                            page_num = int(message.split("page ")[1].split(":")[0])
+                            pages_scraped[0] = page_num
+                        except (IndexError, ValueError):
+                            pass
                     progress.update(
                         task_id,
-                        description=f"[cyan]Scraped page {page} ({books_so_far} books)...",
+                        description=f"[cyan]{message}",
+                        completed=current,
                     )
 
                 # Determine output path
@@ -174,12 +252,17 @@ def scrape(
                     rate_limit_delay=rate_limit,
                     max_retries=max_retries,
                     timeout=timeout,
+                    limit=limit,
+                    shelf=shelf,
                 )
+
+                # Sort books based on user preference
+                library = sort_library_books(library, sort_by)
 
                 # Update progress - scraping complete
                 progress.update(
                     task_id,
-                    description=f"[green]Scraped {library.total_books} books from {current_page[0]} pages",
+                    description=f"[green]Scraped {library.total_books} books from {pages_scraped[0]} pages",
                     completed=True,
                 )
 

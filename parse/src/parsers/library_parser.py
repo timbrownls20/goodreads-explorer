@@ -88,6 +88,20 @@ def extract_user_metadata(soup: BeautifulSoup) -> tuple[str, str]:
             content = meta_user.get('content', '')
             if '/user/show/' in content:
                 user_id = content.split('/user/show/')[-1].split('-')[0]
+                # Also extract username from URL if not found yet
+                if username == "unknown" and '-' in content.split('/user/show/')[-1]:
+                    # Extract "tim-brown" from "/user/show/172435467-tim-brown"
+                    url_part = content.split('/user/show/')[-1]
+                    username = '-'.join(url_part.split('-')[1:]).split('?')[0].split('/')[0]
+
+    # Additional fallback: Try to extract from page title
+    if username == "unknown":
+        title = soup.find('title')
+        if title:
+            title_text = title.get_text(strip=True)
+            # Title format: "Username's books on Goodreads" or similar
+            if "'s books" in title_text or "'s book" in title_text:
+                username = title_text.split("'s book")[0].strip()
 
     return (user_id, username)
 

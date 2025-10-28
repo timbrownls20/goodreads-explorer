@@ -5,6 +5,7 @@ Per Constitution Principles: IV (Integration), V (Observability), VI (Validation
 """
 
 import time
+from datetime import datetime
 from typing import Callable
 import httpx
 
@@ -35,7 +36,9 @@ class GoodreadsScraper:
         rate_limit_delay: float = 1.0,
         max_retries: int = 3,
         timeout: int = 30,
-        progress_callback: Callable[[int, int, str], None] | None = None
+        progress_callback: Callable[[int, int, str], None] | None = None,
+        limit: int | None = None,
+        shelf: str = "all",
     ):
         """Initialize scraper with configuration.
 
@@ -45,11 +48,15 @@ class GoodreadsScraper:
             timeout: Request timeout in seconds (default 30)
             progress_callback: Optional callback for progress updates
                                Signature: callback(current: int, total: int, message: str)
+            limit: Maximum number of books to scrape (default None = all books)
+            shelf: Shelf to scrape (default "all")
         """
         self.rate_limit_delay = rate_limit_delay
         self.max_retries = max_retries
         self.timeout = timeout
         self.progress_callback = progress_callback
+        self.limit = limit
+        self.shelf = shelf
         self.last_request_time = 0.0
 
     def scrape_library(self, profile_url: str) -> Library:
@@ -90,12 +97,18 @@ class GoodreadsScraper:
         # Scrape all pages
         all_books = []
         page_num = 1
+        # Extract username from URL as fallback
         username = "unknown"
+        if '-' in normalized_url:
+            # Extract "tim-brown" from "https://www.goodreads.com/user/show/172435467-tim-brown"
+            url_username = normalized_url.split('/user/show/')[-1]
+            if '-' in url_username:
+                username = '-'.join(url_username.split('-')[1:]).split('?')[0].split('/')[0]
 
         with httpx.Client(timeout=self.timeout) as client:
             while True:
                 # Build library URL for current page
-                library_url = build_library_url(normalized_url, page=page_num)
+                library_url = build_library_url(normalized_url, page=page_num, shelf=self.shelf)
 
                 logger.info(
                     "Fetching library page",
@@ -115,28 +128,45 @@ class GoodreadsScraper:
                 # Parse page
                 page_data = parse_library_page(html)
 
-                # Extract username from first page
+                # Extract username from first page (if parser found it, override URL-based username)
                 if page_num == 1:
-                    username = page_data.get('username', 'unknown')
+                    parsed_username = page_data.get('username', None)
+                    if parsed_username and parsed_username != 'unknown':
+                        username = parsed_username
 
                 # Collect books
                 books_on_page = page_data.get('books', [])
+
+                # Apply limit if specified
+                if self.limit is not None:
+                    remaining = self.limit - len(all_books)
+                    if remaining <= 0:
+                        break
+                    books_on_page = books_on_page[:remaining]
+
                 all_books.extend(books_on_page)
 
                 logger.info(
                     "Page scraped",
                     page=page_num,
                     books_on_page=len(books_on_page),
-                    total_books=len(all_books)
+                    total_books=len(all_books),
+                    limit=self.limit
                 )
 
                 # Progress callback
                 if self.progress_callback:
                     self.progress_callback(
                         len(all_books),
-                        len(all_books),  # Total unknown until complete
-                        f"Scraped page {page_num}: {len(all_books)} books so far"
+                        self.limit or len(all_books),  # Use limit as total if set
+                        f"Scraped page {page_num}: {len(all_books)} books so far" +
+                        (f" (limit: {self.limit})" if self.limit else "")
                     )
+
+                # Check if we've reached the limit
+                if self.limit is not None and len(all_books) >= self.limit:
+                    logger.info("Reached limit", limit=self.limit, books_scraped=len(all_books))
+                    break
 
                 # Check for next page
                 if not page_data.get('has_next_page', False):
@@ -321,7 +351,9 @@ class GoodreadsScraper:
                 logger.warning(
                     "Failed to convert book to model, skipping",
                     book_title=raw_book.get('title', 'unknown'),
-                    error=str(e)
+                    error=str(e),
+                    error_type=type(e).__name__,
+                    exc_info=True  # Include full traceback
                 )
                 continue
 

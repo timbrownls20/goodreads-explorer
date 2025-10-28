@@ -95,6 +95,11 @@ goodreads-explorer scrape \
 #### 3. Advanced Options
 
 ```bash
+# Scrape only the first 50 books (useful for testing)
+goodreads-explorer scrape \
+  https://www.goodreads.com/user/show/172435467-tim-brown \
+  --limit 50
+
 # Use rate limiting (slower scraping to be more respectful)
 goodreads-explorer scrape \
   https://www.goodreads.com/user/show/172435467-tim-brown \
@@ -111,15 +116,15 @@ goodreads-explorer scrape \
 #### Basic Scraping
 
 ```python
-from goodreads_explorer.lib import scrape_library
-from goodreads_explorer.exporters import JSONExporter
+from src.lib import scrape_library
+from src.exporters import export_to_json
+from pathlib import Path
 
 # Scrape library
 library = scrape_library("https://www.goodreads.com/user/show/172435467-tim-brown")
 
 # Export to JSON
-exporter = JSONExporter()
-exporter.export(library, output_path="tim-brown_library.json")
+export_to_json(library, Path("tim-brown_library.json"))
 
 # Access data
 print(f"Total books: {library.total_books}")
@@ -136,7 +141,7 @@ for user_book in library.user_books:
 #### Advanced: Custom Filtering
 
 ```python
-from goodreads_explorer.lib import scrape_library
+from src.lib import scrape_library
 
 library = scrape_library("https://www.goodreads.com/user/show/172435467-tim-brown")
 
@@ -173,8 +178,8 @@ print(f"Mystery books: {len(mystery_books)}")
 #### Error Handling
 
 ```python
-from goodreads_explorer.lib import scrape_library
-from goodreads_explorer.exceptions import (
+from src.lib import scrape_library
+from src.exceptions import (
     InvalidURLError,
     PrivateProfileError,
     NetworkError,
@@ -196,11 +201,16 @@ except NetworkError as e:
 #### Progress Callbacks
 
 ```python
-from goodreads_explorer.lib import scrape_library
+from src.lib import scrape_library
 
-def progress_callback(current, total, book_title):
-    percentage = (current / total) * 100
-    print(f"Progress: {percentage:.1f}% | {current}/{total} | {book_title}")
+def progress_callback(current, total, message):
+    """
+    Progress callback receives:
+    - current: Number of books scraped so far
+    - total: Total books (same as current until scraping completes)
+    - message: Descriptive progress message
+    """
+    print(message)
 
 library = scrape_library(
     "https://www.goodreads.com/user/show/172435467-tim-brown",
@@ -286,7 +296,7 @@ goodreads-explorer scrape \
 ### 2. Analyze Reading Patterns
 
 ```python
-from goodreads_explorer.lib import scrape_library
+from src.lib import scrape_library
 from collections import Counter
 from datetime import datetime
 
@@ -330,7 +340,7 @@ goodreads-explorer scrape \
 ### 4. Find Books to Re-read
 
 ```python
-from goodreads_explorer.lib import scrape_library
+from src.lib import scrape_library
 from datetime import datetime, timedelta
 
 library = scrape_library("https://www.goodreads.com/user/show/172435467-tim-brown")

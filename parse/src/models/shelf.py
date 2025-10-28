@@ -34,7 +34,7 @@ class Shelf(BaseModel):
         book_count: Number of books on this shelf (if available)
     """
 
-    name: str = Field(min_length=1, max_length=100, description="Shelf name")
+    name: str = Field(min_length=1, max_length=200, description="Shelf name")
     is_builtin: bool = Field(default=False, description="Is Goodreads built-in shelf")
     book_count: int | None = Field(None, ge=0, description="Number of books on shelf")
 

@@ -30,8 +30,8 @@ class Book(BaseModel):
     """
 
     goodreads_id: str = Field(min_length=1, description="Unique Goodreads book ID")
-    title: str = Field(min_length=1, max_length=500, description="Book title")
-    author: str = Field(min_length=1, max_length=200, description="Primary author")
+    title: str = Field(min_length=1, max_length=1000, description="Book title")
+    author: str = Field(min_length=1, max_length=500, description="Primary author")
     additional_authors: list[str] = Field(
         default_factory=list,
         description="Co-authors, editors, etc."
@@ -39,12 +39,12 @@ class Book(BaseModel):
     isbn: ISBN | None = Field(None, description="ISBN-10 or ISBN-13")
     isbn13: str | None = Field(None, pattern=r'^\d{13}$', description="ISBN-13 format")
     publication_year: int | None = Field(None, ge=1000, le=2100, description="Year published")
-    publisher: str | None = Field(None, max_length=200, description="Publisher name")
+    publisher: str | None = Field(None, max_length=500, description="Publisher name")
     page_count: int | None = Field(None, ge=1, description="Number of pages")
     language: str | None = Field(None, description="Book language (ISO 639-1)")
     genres: list[str] = Field(
         default_factory=list,
-        max_length=50,
+        max_length=100,
         description="Genre tags/categories"
     )
     average_rating: float | None = Field(None, ge=0.0, le=5.0, description="Goodreads avg rating")
