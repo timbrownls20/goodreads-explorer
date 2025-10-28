@@ -40,24 +40,24 @@ pip3 install -r requirements.txt
 
 ```bash
 # Scrape library and export to JSON
-python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/12345-bookworm
+python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown
 
 # Scrape and specify output format
-python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/12345-bookworm --format json
+python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown --format json
 
 # Scrape and export to CSV
-python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/12345-bookworm --format csv
+python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown --format csv
 
 # Scrape and export to both JSON and CSV
-python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/12345-bookworm --format all
+python3 -m goodreads_explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown --format all
 ```
 
 **Output**:
 ```
-Scraping library for user: bookworm (ID: 12345)
+Scraping library for user: tim-brown (ID: 172435467)
 Progress: [████████████████████] 100% | 250/250 books | ETA: 0:00
 ✓ Scraped 250 books successfully
-✓ Exported to: bookworm_library_2025-10-28.json
+✓ Exported to: tim-brown_library_2025-10-28.json
 ```
 
 #### 2. Specify Output Directory
@@ -65,7 +65,7 @@ Progress: [████████████████████] 100% | 
 ```bash
 # Save exports to custom directory
 python3 -m goodreads_explorer scrape \
-  https://www.goodreads.com/user/show/12345-bookworm \
+  https://www.goodreads.com/user/show/172435467-tim-brown \
   --output-dir ./exports/
 ```
 
@@ -74,7 +74,7 @@ python3 -m goodreads_explorer scrape \
 ```bash
 # Resume from checkpoint if scraping was interrupted
 python3 -m goodreads_explorer scrape \
-  https://www.goodreads.com/user/show/12345-bookworm \
+  https://www.goodreads.com/user/show/172435467-tim-brown \
   --resume
 ```
 
@@ -87,11 +87,11 @@ from goodreads_explorer.lib import scrape_library
 from goodreads_explorer.exporters import JSONExporter
 
 # Scrape library
-library = scrape_library("https://www.goodreads.com/user/show/12345-bookworm")
+library = scrape_library("https://www.goodreads.com/user/show/172435467-tim-brown")
 
 # Export to JSON
 exporter = JSONExporter()
-exporter.export(library, output_path="bookworm_library.json")
+exporter.export(library, output_path="tim-brown_library.json")
 
 # Access data
 print(f"Total books: {library.total_books}")
@@ -110,7 +110,7 @@ for user_book in library.user_books:
 ```python
 from goodreads_explorer.lib import scrape_library
 
-library = scrape_library("https://www.goodreads.com/user/show/12345-bookworm")
+library = scrape_library("https://www.goodreads.com/user/show/172435467-tim-brown")
 
 # Filter books by rating
 five_star_books = [
@@ -154,7 +154,7 @@ from goodreads_explorer.exceptions import (
 )
 
 try:
-    library = scrape_library("https://www.goodreads.com/user/show/12345-bookworm")
+    library = scrape_library("https://www.goodreads.com/user/show/172435467-tim-brown")
 except InvalidURLError as e:
     print(f"Invalid Goodreads URL: {e}")
 except PrivateProfileError:
@@ -175,7 +175,7 @@ def progress_callback(current, total, book_title):
     print(f"Progress: {percentage:.1f}% | {current}/{total} | {book_title}")
 
 library = scrape_library(
-    "https://www.goodreads.com/user/show/12345-bookworm",
+    "https://www.goodreads.com/user/show/172435467-tim-brown",
     progress_callback=progress_callback
 )
 ```
@@ -189,9 +189,9 @@ library = scrape_library(
 **Structure**:
 ```json
 {
-  "user_id": "12345",
-  "username": "bookworm",
-  "profile_url": "https://www.goodreads.com/user/show/12345-bookworm",
+  "user_id": "172435467",
+  "username": "tim-brown",
+  "profile_url": "https://www.goodreads.com/user/show/172435467-tim-brown",
   "total_books": 250,
   "scraped_at": "2025-10-28T10:30:00Z",
   "schema_version": "1.0.0",
@@ -250,7 +250,7 @@ See [contracts/csv-export-spec.md](./contracts/csv-export-spec.md) for detailed 
 ```bash
 # Create JSON backup
 python3 -m goodreads_explorer scrape \
-  https://www.goodreads.com/user/show/12345-bookworm \
+  https://www.goodreads.com/user/show/172435467-tim-brown \
   --format json \
   --output-dir ./backups/
 ```
@@ -262,7 +262,7 @@ from goodreads_explorer.lib import scrape_library
 from collections import Counter
 from datetime import datetime
 
-library = scrape_library("https://www.goodreads.com/user/show/12345-bookworm")
+library = scrape_library("https://www.goodreads.com/user/show/172435467-tim-brown")
 
 # Books read per year
 books_by_year = Counter(
@@ -290,7 +290,7 @@ print(f"Top 5 genres: {genre_counter.most_common(5)}")
 ```bash
 # Export to CSV for Excel
 python3 -m goodreads_explorer scrape \
-  https://www.goodreads.com/user/show/12345-bookworm \
+  https://www.goodreads.com/user/show/172435467-tim-brown \
   --format csv
 
 # Open in Excel or Google Sheets
@@ -305,7 +305,7 @@ python3 -m goodreads_explorer scrape \
 from goodreads_explorer.lib import scrape_library
 from datetime import datetime, timedelta
 
-library = scrape_library("https://www.goodreads.com/user/show/12345-bookworm")
+library = scrape_library("https://www.goodreads.com/user/show/172435467-tim-brown")
 
 # Find 5-star books read more than 2 years ago
 two_years_ago = datetime.now() - timedelta(days=730)
@@ -351,12 +351,12 @@ View detailed scraping logs:
 ```bash
 # Enable verbose logging
 python3 -m goodreads_explorer scrape \
-  https://www.goodreads.com/user/show/12345-bookworm \
+  https://www.goodreads.com/user/show/172435467-tim-brown \
   --log-level DEBUG
 
 # Log to file
 python3 -m goodreads_explorer scrape \
-  https://www.goodreads.com/user/show/12345-bookworm \
+  https://www.goodreads.com/user/show/172435467-tim-brown \
   --log-file scrape.log
 ```
 
@@ -392,12 +392,12 @@ Log output includes:
 ```bash
 # Increase timeout
 python3 -m goodreads_explorer scrape \
-  https://www.goodreads.com/user/show/12345-bookworm \
+  https://www.goodreads.com/user/show/172435467-tim-brown \
   --timeout 30
 
 # Enable retries
 python3 -m goodreads_explorer scrape \
-  https://www.goodreads.com/user/show/12345-bookworm \
+  https://www.goodreads.com/user/show/172435467-tim-brown \
   --retries 3
 ```
 
