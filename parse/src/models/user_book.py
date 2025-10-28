@@ -61,6 +61,7 @@ class UserBookRelation(BaseModel):
     date_added: datetime | None = Field(None, description="Date added to library")
     date_started: datetime | None = Field(None, description="Date started reading")
     date_finished: datetime | None = Field(None, description="Date finished reading")
+    scraped_at: datetime | None = Field(None, description="Timestamp when book data was scraped")
 
     @model_validator(mode='after')
     def validate_dates(self) -> 'UserBookRelation':

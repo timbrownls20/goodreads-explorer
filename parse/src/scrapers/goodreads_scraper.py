@@ -186,6 +186,9 @@ class GoodreadsScraper:
                        total_books=len(all_books))
 
             for i, book_data in enumerate(all_books, 1):
+                # Add timestamp for when this book is being scraped
+                book_data['scraped_at'] = datetime.now().isoformat()
+
                 # Fetch review page for shelf data
                 review_url = book_data.get('review_url')
                 if review_url:
@@ -420,6 +423,14 @@ class GoodreadsScraper:
                 reading_status_str = raw_book.get('reading_status', 'to-read')
                 reading_status = ReadingStatus(reading_status_str)
 
+                # Parse scraped_at timestamp if present
+                scraped_at = None
+                if raw_book.get('scraped_at'):
+                    try:
+                        scraped_at = datetime.fromisoformat(raw_book.get('scraped_at'))
+                    except (ValueError, TypeError):
+                        pass
+
                 # Create UserBookRelation
                 user_book = UserBookRelation(
                     book=book,
@@ -429,7 +440,8 @@ class GoodreadsScraper:
                     review=None,  # Reviews handled in User Story 3
                     date_added=raw_book.get('date_added'),
                     date_started=None,
-                    date_finished=None
+                    date_finished=None,
+                    scraped_at=scraped_at
                 )
 
                 user_books.append(user_book)

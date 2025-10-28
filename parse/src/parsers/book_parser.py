@@ -7,6 +7,8 @@ Per Constitution Principle I: Data-First with extensible parsing.
 
 from bs4 import BeautifulSoup
 from typing import Any
+import json
+import re
 
 from src.validators import sanitize_text, validate_isbn, validate_publication_year
 
@@ -41,27 +43,113 @@ def parse_book_page(html: str) -> dict[str, Any]:
 
     book_data = {}
 
-    # Extract ISBN (User Story 2)
-    isbn_data = extract_isbn(soup)
-    book_data.update(isbn_data)
+    # First try to extract from JSON-LD schema (most reliable source)
+    schema_data = extract_from_schema(soup)
+    if schema_data:
+        book_data.update(schema_data)
+
+    # Extract ISBN (User Story 2) - fallback if not in schema
+    if not book_data.get('isbn') and not book_data.get('isbn13'):
+        isbn_data = extract_isbn(soup)
+        book_data.update(isbn_data)
 
     # Extract publication details (User Story 2)
     pub_data = extract_publication_details(soup)
-    book_data.update(pub_data)
+    # Only update fields that aren't already set from schema
+    for key, value in pub_data.items():
+        if value and not book_data.get(key):
+            book_data[key] = value
 
     # Extract genres (User Story 2)
-    genres = extract_genres(soup)
-    book_data['genres'] = genres
+    if not book_data.get('genres'):
+        genres = extract_genres(soup)
+        book_data['genres'] = genres
 
     # Extract ratings (available on library page too, but more detailed here)
-    rating_data = extract_rating_details(soup)
-    book_data.update(rating_data)
+    if not book_data.get('average_rating'):
+        rating_data = extract_rating_details(soup)
+        book_data.update(rating_data)
 
     # Extract cover image
-    cover_url = extract_cover_image(soup)
-    book_data['cover_image_url'] = cover_url
+    if not book_data.get('cover_image_url'):
+        cover_url = extract_cover_image(soup)
+        book_data['cover_image_url'] = cover_url
 
     return book_data
+
+
+def extract_from_schema(soup: BeautifulSoup) -> dict[str, Any]:
+    """Extract book metadata from JSON-LD schema.
+
+    Args:
+        soup: BeautifulSoup parsed HTML
+
+    Returns:
+        Dictionary with book metadata from schema
+    """
+    schema_data = {}
+
+    # Find JSON-LD script tag
+    script_tag = soup.find('script', type='application/ld+json')
+    if script_tag and script_tag.string:
+        try:
+            data = json.loads(script_tag.string)
+
+            # Extract ISBN (may be ISBN-10 or ISBN-13)
+            if 'isbn' in data:
+                isbn_str = str(data['isbn'])
+                validated_isbn = validate_isbn(isbn_str)
+                if validated_isbn:
+                    if len(validated_isbn) == 13:
+                        schema_data['isbn13'] = validated_isbn
+                        # Try to derive ISBN-10 if it's ISBN-13
+                        if validated_isbn.startswith('978'):
+                            # Can't reliably convert back to ISBN-10, leave as None
+                            pass
+                    elif len(validated_isbn) == 10:
+                        schema_data['isbn'] = validated_isbn
+
+            # Extract page count
+            if 'numberOfPages' in data:
+                try:
+                    schema_data['page_count'] = int(data['numberOfPages'])
+                except (ValueError, TypeError):
+                    pass
+
+            # Extract language
+            if 'inLanguage' in data:
+                schema_data['language'] = sanitize_text(data['inLanguage'])
+
+            # Extract cover image
+            if 'image' in data:
+                schema_data['cover_image_url'] = data['image']
+
+            # Extract rating
+            if 'aggregateRating' in data and isinstance(data['aggregateRating'], dict):
+                rating_info = data['aggregateRating']
+                if 'ratingValue' in rating_info:
+                    try:
+                        schema_data['average_rating'] = float(rating_info['ratingValue'])
+                    except (ValueError, TypeError):
+                        pass
+                if 'ratingCount' in rating_info:
+                    try:
+                        schema_data['ratings_count'] = int(rating_info['ratingCount'])
+                    except (ValueError, TypeError):
+                        pass
+
+            # Publisher is sometimes in the schema (though not common on Goodreads)
+            if 'publisher' in data:
+                if isinstance(data['publisher'], dict):
+                    schema_data['publisher'] = sanitize_text(data['publisher'].get('name', ''))
+                else:
+                    schema_data['publisher'] = sanitize_text(str(data['publisher']))
+
+        except (json.JSONDecodeError, KeyError, AttributeError) as e:
+            # If JSON parsing fails, return empty dict (will fall back to HTML parsing)
+            pass
+
+    return schema_data
 
 
 def extract_isbn(soup: BeautifulSoup) -> dict[str, Any]:
