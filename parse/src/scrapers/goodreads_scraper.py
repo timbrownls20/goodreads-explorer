@@ -197,12 +197,15 @@ class GoodreadsScraper:
                         # Fetch review page
                         review_html = self._fetch_with_retry(client, review_url)
 
-                        # Extract all shelves from review page
-                        shelves, reading_status = parse_review_page_shelves(review_html)
+                        # Extract all shelves and dates from review page
+                        shelves, reading_status, dates = parse_review_page_shelves(review_html)
 
-                        # Update book data with complete shelf information
+                        # Update book data with complete shelf information and dates
                         book_data['shelves'] = shelves
                         book_data['reading_status'] = reading_status
+                        book_data['date_added'] = dates.get('date_added')
+                        book_data['date_started'] = dates.get('date_started')
+                        book_data['date_finished'] = dates.get('date_finished')
 
                         # Also extract publisher from review page if present
                         review_metadata = parse_book_page(review_html)
@@ -451,8 +454,8 @@ class GoodreadsScraper:
                     shelves=shelves,
                     review=None,  # Reviews handled in User Story 3
                     date_added=raw_book.get('date_added'),
-                    date_started=None,
-                    date_finished=None,
+                    date_started=raw_book.get('date_started'),
+                    date_finished=raw_book.get('date_finished'),
                     scraped_at=scraped_at
                 )
 

@@ -338,14 +338,15 @@ def get_next_page_url(soup: BeautifulSoup, current_url: str) -> str | None:
     return None
 
 
-def parse_review_page_shelves(html: str) -> tuple[list[str], str]:
-    """Parse a Goodreads review page to extract all shelves.
+def parse_review_page_shelves(html: str) -> tuple[list[str], str, dict]:
+    """Parse a Goodreads review page to extract shelves and dates.
 
     Args:
         html: Raw HTML content from Goodreads review/view page
 
     Returns:
-        Tuple of (shelf_names_list, reading_status)
+        Tuple of (shelf_names_list, reading_status, dates_dict)
+        where dates_dict contains: date_added, date_started, date_finished
     """
     from src.logging_config import get_logger
     logger = get_logger(__name__)
@@ -353,6 +354,11 @@ def parse_review_page_shelves(html: str) -> tuple[list[str], str]:
     soup = BeautifulSoup(html, 'lxml')
     shelves = []
     reading_status = None  # No default - keep null if unknown
+    dates = {
+        'date_added': None,
+        'date_started': None,
+        'date_finished': None
+    }
 
     # Find the "bookshelves:" section
     bookshelves_label = soup.find('span', class_='userReview', string=lambda s: s and 'bookshelves:' in s.lower() if s else False)
@@ -419,4 +425,48 @@ def parse_review_page_shelves(html: str) -> tuple[list[str], str]:
     if not shelves:
         logger.debug("No shelves extracted from review page")
 
-    return (shelves, reading_status)
+    # Extract dates from Reading Progress section
+    import re
+    from datetime import datetime
+
+    reading_timeline = soup.find('div', class_='readingTimeline')
+    if reading_timeline:
+        rows = reading_timeline.find_all('div', class_='readingTimeline__row')
+
+        for i, row in enumerate(rows):
+            text_div = row.find('div', class_='readingTimeline__text')
+            if text_div:
+                text = text_div.get_text(separator=' ', strip=True)
+
+                # Parse date at start of text (e.g., 'April 29, 2025' or 'April  1, 2025')
+                date_match = re.match(r'([A-Za-z]+\s+\d+,\s+\d{4})', text)
+                if date_match:
+                    date_str = date_match.group(1)
+
+                    try:
+                        # Parse the date string to ISO format
+                        parsed_date = datetime.strptime(date_str, '%B %d, %Y')
+                        iso_date = parsed_date.isoformat()
+
+                        # First "Shelved" event with a date is date_added
+                        if 'Shelved' in text and not dates['date_added']:
+                            dates['date_added'] = iso_date
+
+                        # Look for Started Reading
+                        if 'Started Reading' in text and not dates['date_started']:
+                            dates['date_started'] = iso_date
+
+                        # Look for Finished Reading
+                        if 'Finished Reading' in text and not dates['date_finished']:
+                            dates['date_finished'] = iso_date
+
+                    except ValueError as e:
+                        logger.debug(f"Failed to parse date: {date_str}", error=str(e))
+
+        if any(dates.values()):
+            logger.debug("Extracted dates from reading timeline",
+                        date_added=dates['date_added'],
+                        date_started=dates['date_started'],
+                        date_finished=dates['date_finished'])
+
+    return (shelves, reading_status, dates)
