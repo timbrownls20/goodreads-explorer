@@ -48,6 +48,14 @@ class Book(BaseModel):
         description="Genre tags/categories"
     )
     average_rating: float | None = Field(None, ge=0.0, le=5.0, description="Goodreads avg rating")
+
+    @field_validator('page_count', mode='before')
+    @classmethod
+    def validate_page_count(cls, v):
+        """Convert invalid page counts (0 or negative) to None."""
+        if v is not None and v <= 0:
+            return None
+        return v
     ratings_count: int | None = Field(None, ge=0, description="Total Goodreads ratings")
     cover_image_url: HttpUrl | None = Field(None, description="Cover image URL")
     goodreads_url: HttpUrl = Field(description="Canonical Goodreads book page")

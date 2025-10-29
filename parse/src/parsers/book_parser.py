@@ -43,10 +43,18 @@ def parse_book_page(html: str) -> dict[str, Any]:
 
     book_data = {}
 
-    # First try to extract from JSON-LD schema (most reliable source)
+    # First try to extract from Next.js __NEXT_DATA__ (most complete source, includes publisher)
+    next_data = extract_from_next_data(soup)
+    if next_data:
+        book_data.update(next_data)
+
+    # Then try JSON-LD schema as fallback
     schema_data = extract_from_schema(soup)
     if schema_data:
-        book_data.update(schema_data)
+        # Only update fields not already set from __NEXT_DATA__
+        for key, value in schema_data.items():
+            if value and not book_data.get(key):
+                book_data[key] = value
 
     # Extract ISBN (User Story 2) - fallback if not in schema
     if not book_data.get('isbn') and not book_data.get('isbn13'):
@@ -76,6 +84,81 @@ def parse_book_page(html: str) -> dict[str, Any]:
         book_data['cover_image_url'] = cover_url
 
     return book_data
+
+
+def extract_from_next_data(soup: BeautifulSoup) -> dict[str, Any]:
+    """Extract book metadata from Next.js __NEXT_DATA__ Apollo state.
+
+    This contains detailed book information including publisher.
+
+    Args:
+        soup: BeautifulSoup parsed HTML
+
+    Returns:
+        Dictionary with book metadata from Apollo state
+    """
+    next_data = {}
+
+    # Find __NEXT_DATA__ script tag
+    script_tag = soup.find('script', id='__NEXT_DATA__')
+    if script_tag and script_tag.string:
+        try:
+            data = json.loads(script_tag.string)
+            apollo_state = data.get('props', {}).get('pageProps', {}).get('apolloState', {})
+
+            # Find the Book object (key starts with "Book:")
+            for key, value in apollo_state.items():
+                if key.startswith('Book:') and isinstance(value, dict):
+                    # Extract details which contains publisher, ISBN, etc.
+                    details = value.get('details')
+                    if details and isinstance(details, dict):
+                        # Publisher
+                        if 'publisher' in details:
+                            next_data['publisher'] = sanitize_text(details['publisher'], max_length=200)
+
+                        # ISBN and ISBN-13
+                        if 'isbn' in details:
+                            isbn_str = str(details['isbn'])
+                            validated_isbn = validate_isbn(isbn_str)
+                            if validated_isbn and len(validated_isbn) == 10:
+                                next_data['isbn'] = validated_isbn
+
+                        if 'isbn13' in details:
+                            isbn13_str = str(details['isbn13'])
+                            validated_isbn13 = validate_isbn(isbn13_str)
+                            if validated_isbn13 and len(validated_isbn13) == 13:
+                                next_data['isbn13'] = validated_isbn13
+
+                        # Page count
+                        if 'numPages' in details:
+                            try:
+                                next_data['page_count'] = int(details['numPages'])
+                            except (ValueError, TypeError):
+                                pass
+
+                        # Language
+                        if 'language' in details and isinstance(details['language'], dict):
+                            lang_name = details['language'].get('name')
+                            if lang_name:
+                                next_data['language'] = sanitize_text(lang_name)
+
+                        # Publication year from publicationTime (milliseconds timestamp)
+                        if 'publicationTime' in details:
+                            try:
+                                timestamp_ms = int(details['publicationTime'])
+                                from datetime import datetime
+                                pub_date = datetime.fromtimestamp(timestamp_ms / 1000)
+                                next_data['publication_year'] = validate_publication_year(pub_date.year)
+                            except (ValueError, TypeError, OSError):
+                                pass
+
+                    break  # Only process first Book object
+
+        except (json.JSONDecodeError, KeyError, AttributeError) as e:
+            # If JSON parsing fails, return empty dict
+            pass
+
+    return next_data
 
 
 def extract_from_schema(soup: BeautifulSoup) -> dict[str, Any]:
@@ -220,6 +303,11 @@ def extract_publication_details(soup: BeautifulSoup) -> dict[str, Any]:
         if ' by ' in text:
             publisher = text.split(' by ')[-1].strip()
             pub_data['publisher'] = sanitize_text(publisher, max_length=200)
+
+    # Note: Publisher information is not consistently available on Goodreads book pages.
+    # The public book view pages do not include publisher data in the HTML or JSON-LD schema.
+    # Publisher data may only be available on edition-specific pages or to logged-in users.
+    # As a result, publisher will remain None for most books scraped from public pages.
 
     # Extract page count from pagesFormat
     pages_elem = soup.find('p', {'data-testid': 'pagesFormat'})

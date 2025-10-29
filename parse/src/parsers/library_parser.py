@@ -243,7 +243,7 @@ def extract_shelves_from_cell(cell: BeautifulSoup) -> tuple[list[str], str]:
     logger = get_logger(__name__)
 
     shelves = []
-    reading_status = ReadingStatus.TO_READ.value  # Default
+    reading_status = None  # No default - keep null if unknown
 
     # Find all shelf links - but filter out rating stars and other non-shelf links
     all_links = cell.find_all('a', href=True)
@@ -284,10 +284,9 @@ def extract_shelves_from_cell(cell: BeautifulSoup) -> tuple[list[str], str]:
         logger.debug("No shelf links found with valid hrefs",
                     cell_html=str(cell)[:200])
 
-    # If no shelves found, default to to-read
+    # If no shelves found, log warning but don't default
     if not shelves:
-        shelves = ['to-read']
-        logger.debug("No shelves extracted, defaulting to to-read")
+        logger.debug("No shelves extracted from table cell")
     else:
         logger.debug("Extracted shelves", shelves=shelves, reading_status=reading_status)
 
@@ -353,7 +352,7 @@ def parse_review_page_shelves(html: str) -> tuple[list[str], str]:
 
     soup = BeautifulSoup(html, 'lxml')
     shelves = []
-    reading_status = ReadingStatus.TO_READ.value  # Default
+    reading_status = None  # No default - keep null if unknown
 
     # Find the "bookshelves:" section
     bookshelves_label = soup.find('span', class_='userReview', string=lambda s: s and 'bookshelves:' in s.lower() if s else False)
@@ -397,7 +396,8 @@ def parse_review_page_shelves(html: str) -> tuple[list[str], str]:
                     # Convert "toread" -> "to-read", "currentlyreading" -> "currently-reading"
                     if shelf == 'toread':
                         normalized_shelves.append('to-read')
-                        reading_status = ReadingStatus.TO_READ.value
+                        if reading_status is None:
+                            reading_status = ReadingStatus.TO_READ.value
                     elif shelf == 'currentlyreading':
                         normalized_shelves.append('currently-reading')
                         reading_status = ReadingStatus.CURRENTLY_READING.value
@@ -415,9 +415,8 @@ def parse_review_page_shelves(html: str) -> tuple[list[str], str]:
             except (json.JSONDecodeError, AttributeError) as e:
                 logger.warning("Failed to parse shelf JSON from JavaScript", error=str(e))
 
-    # If no shelves found, default to to-read
+    # If no shelves found, log warning but don't default
     if not shelves:
-        shelves = ['to-read']
-        logger.debug("No shelves extracted from review page, defaulting to to-read")
+        logger.debug("No shelves extracted from review page")
 
     return (shelves, reading_status)

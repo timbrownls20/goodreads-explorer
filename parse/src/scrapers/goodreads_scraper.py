@@ -191,6 +191,7 @@ class GoodreadsScraper:
 
                 # Fetch review page for shelf data
                 review_url = book_data.get('review_url')
+                review_html = None
                 if review_url:
                     try:
                         # Fetch review page
@@ -202,6 +203,11 @@ class GoodreadsScraper:
                         # Update book data with complete shelf information
                         book_data['shelves'] = shelves
                         book_data['reading_status'] = reading_status
+
+                        # Also extract publisher from review page if present
+                        review_metadata = parse_book_page(review_html)
+                        if review_metadata.get('publisher'):
+                            book_data['publisher'] = review_metadata['publisher']
 
                     except Exception as e:
                         logger.warning("Failed to fetch shelf data for book",
@@ -413,15 +419,21 @@ class GoodreadsScraper:
                 )
 
                 # Create Shelf models
-                shelf_names = raw_book.get('shelves', ['to-read'])
+                shelf_names = raw_book.get('shelves', [])
                 shelves = []
                 for shelf_name in shelf_names:
                     is_builtin = shelf_name in ['read', 'currently-reading', 'to-read']
                     shelves.append(Shelf(name=shelf_name, is_builtin=is_builtin))
 
-                # Determine reading status
-                reading_status_str = raw_book.get('reading_status', 'to-read')
-                reading_status = ReadingStatus(reading_status_str)
+                # Model requires at least 1 shelf - use 'unknown' as fallback if none found
+                if not shelves:
+                    shelves = [Shelf(name='unknown', is_builtin=False)]
+                    logger.warning("No shelves found for book, using 'unknown' fallback",
+                                  book_id=raw_book.get('goodreads_id'))
+
+                # Determine reading status (keep as None if not found)
+                reading_status_str = raw_book.get('reading_status')
+                reading_status = ReadingStatus(reading_status_str) if reading_status_str else None
 
                 # Parse scraped_at timestamp if present
                 scraped_at = None

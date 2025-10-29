@@ -55,7 +55,7 @@ class UserBookRelation(BaseModel):
 
     book: Book = Field(description="The book entity")
     user_rating: int | None = Field(None, ge=1, le=5, description="User's 1-5 star rating")
-    reading_status: ReadingStatus = Field(description="Current reading status")
+    reading_status: ReadingStatus | None = Field(None, description="Current reading status")
     shelves: list[Shelf] = Field(min_length=1, max_length=100, description="Shelves this book is on")
     review: Review | None = Field(None, description="User's review if exists")
     date_added: datetime | None = Field(None, description="Date added to library")
