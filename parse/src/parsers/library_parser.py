@@ -470,3 +470,64 @@ def parse_review_page_shelves(html: str) -> tuple[list[str], str, dict]:
                         date_finished=dates['date_finished'])
 
     return (shelves, reading_status, dates)
+
+
+def parse_reading_status_shelves(html: str) -> list[tuple[str, int]]:
+    """Parse reading status shelves from library page sidebar.
+
+    Extracts the "exclusive" reading status shelves that appear before the
+    horizontal divider in the shelves section. These are:
+    - to-read, currently-reading, read (built-in)
+    - did-not-finish, paused, reference, to-read-next, to-read-owned (custom status)
+
+    Args:
+        html: Raw HTML content from Goodreads library page
+
+    Returns:
+        List of tuples (shelf_slug, book_count) for each reading status shelf
+        Example: [('to-read', 209), ('currently-reading', 3), ('read', 1327)]
+    """
+    from src.logging_config import get_logger
+    import re
+
+    logger = get_logger(__name__)
+
+    soup = BeautifulSoup(html, 'lxml')
+    shelves = []
+
+    # Find the paginatedShelfList div
+    shelf_list = soup.find('div', id='paginatedShelfList')
+    if not shelf_list:
+        logger.warning("Could not find paginatedShelfList div")
+        return []
+
+    # Find all userShelf divs before the horizontal divider
+    for elem in shelf_list.children:
+        if hasattr(elem, 'name'):
+            # Stop at horizontal divider
+            if elem.name == 'div' and 'horizontalGreyDivider' in elem.get('class', []):
+                break
+
+            # Process userShelf divs
+            if elem.name == 'div' and 'userShelf' in elem.get('class', []):
+                # Find the actionLinkLite link (the second link, which has the shelf name and count)
+                link = elem.find('a', class_='actionLinkLite')
+                if link:
+                    text = link.get_text(strip=True)
+                    href = link.get('href')
+
+                    # Extract shelf name and count from text like "Want to Read  ‎(209)"
+                    # The invisible character before the parenthesis is \u200e (LEFT-TO-RIGHT MARK)
+                    match = re.search(r'\((\d+)\)', text)
+                    if match:
+                        count = int(match.group(1))
+
+                        # Extract shelf slug from href
+                        shelf_match = re.search(r'shelf=([^&]+)', href)
+                        if shelf_match:
+                            shelf_slug = shelf_match.group(1)
+                            shelves.append((shelf_slug, count))
+                            logger.debug(f"Found reading status shelf: {shelf_slug} ({count} books)")
+
+    logger.info(f"Extracted {len(shelves)} reading status shelves", shelves=[s[0] for s in shelves])
+    return shelves

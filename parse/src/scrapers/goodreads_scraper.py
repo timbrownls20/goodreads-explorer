@@ -11,7 +11,7 @@ import httpx
 
 from src.exceptions import InvalidURLError, NetworkError, PrivateProfileError, RateLimitError
 from src.models import Library, UserBookRelation, Book, Shelf, ReadingStatus
-from src.parsers import parse_library_page, parse_review_page_shelves, parse_book_page
+from src.parsers import parse_library_page, parse_review_page_shelves, parse_book_page, parse_reading_status_shelves
 from src.scrapers.pagination import detect_pagination, get_next_page_url, build_library_url
 from src.validators import validate_goodreads_profile_url, extract_user_id_from_url
 from src.logging_config import get_logger
@@ -38,7 +38,6 @@ class GoodreadsScraper:
         timeout: int = 30,
         progress_callback: Callable[[int, int, str], None] | None = None,
         limit: int | None = None,
-        shelf: str = "all",
     ):
         """Initialize scraper with configuration.
 
@@ -48,19 +47,20 @@ class GoodreadsScraper:
             timeout: Request timeout in seconds (default 30)
             progress_callback: Optional callback for progress updates
                                Signature: callback(current: int, total: int, message: str)
-            limit: Maximum number of books to scrape (default None = all books)
-            shelf: Shelf to scrape (default "all")
+            limit: Maximum number of books to scrape from each shelf (default None = all books)
         """
         self.rate_limit_delay = rate_limit_delay
         self.max_retries = max_retries
         self.timeout = timeout
         self.progress_callback = progress_callback
         self.limit = limit
-        self.shelf = shelf
         self.last_request_time = 0.0
 
     def scrape_library(self, profile_url: str) -> Library:
         """Scrape complete library from Goodreads profile.
+
+        This method now scrapes each reading status shelf separately (to-read,
+        currently-reading, read, etc.) and merges the results into a single library.
 
         Note: To get complete shelf information for each book, this method fetches
         the review/view page for each book, which contains all shelves.
@@ -94,13 +94,9 @@ class GoodreadsScraper:
         logger.info(
             "Starting library scrape",
             user_id=user_id,
-            profile_url=normalized_url,
-            shelf=self.shelf
+            profile_url=normalized_url
         )
 
-        # Scrape library pages
-        all_books = []
-        page_num = 1
         # Extract username from URL as fallback
         username = "unknown"
         if '-' in normalized_url:
@@ -112,74 +108,143 @@ class GoodreadsScraper:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
         }
+
         with httpx.Client(timeout=self.timeout, headers=headers) as client:
-            while True:
-                # Build library URL for current page
-                library_url = build_library_url(normalized_url, page=page_num, shelf=self.shelf)
+            # First, fetch the library page to get the list of reading status shelves
+            initial_library_url = build_library_url(normalized_url, page=1, shelf="all")
+            logger.info("Fetching initial library page to discover shelves", url=initial_library_url)
 
-                logger.info(
-                    "Fetching library page",
-                    page=page_num,
-                    url=library_url
+            initial_html = self._fetch_with_retry(client, initial_library_url)
+
+            # Check for private profile
+            if self._is_private_profile(initial_html):
+                raise PrivateProfileError(
+                    f"Profile {normalized_url} is private and cannot be scraped"
                 )
 
-                # Fetch page with rate limiting and retries
-                html = self._fetch_with_retry(client, library_url)
+            # Parse the initial page to get username
+            initial_page_data = parse_library_page(initial_html)
+            parsed_username = initial_page_data.get('username', None)
+            if parsed_username and parsed_username != 'unknown':
+                username = parsed_username
 
-                # Check for private profile
-                if self._is_private_profile(html):
-                    raise PrivateProfileError(
-                        f"Profile {normalized_url} is private and cannot be scraped"
+            # Extract reading status shelves (excluding "All")
+            shelves_to_scrape = parse_reading_status_shelves(initial_html)
+            shelves_to_scrape = [(slug, count) for slug, count in shelves_to_scrape if slug != "all"]
+
+            logger.info(
+                "Discovered reading status shelves",
+                shelves=[f"{slug} ({count})" for slug, count in shelves_to_scrape]
+            )
+
+            # Track books across shelves to avoid duplicates
+            all_books = []
+            seen_book_ids = set()
+            total_pages_scraped = 0
+
+            # Scrape each shelf separately
+            for shelf_slug, shelf_book_count in shelves_to_scrape:
+                logger.info(
+                    "Starting scrape of shelf",
+                    shelf=shelf_slug,
+                    expected_books=shelf_book_count,
+                    limit_per_shelf=self.limit
+                )
+
+                # Map shelf slug to reading status
+                reading_status = self._map_shelf_to_reading_status(shelf_slug)
+
+                # Track books from current shelf
+                shelf_books = []
+
+                # Scrape all pages of this shelf
+                page_num = 1
+                while True:
+                    # Build library URL for current page and shelf
+                    library_url = build_library_url(normalized_url, page=page_num, shelf=shelf_slug)
+
+                    logger.info(
+                        "Fetching library page",
+                        shelf=shelf_slug,
+                        page=page_num,
+                        url=library_url
                     )
 
-                # Parse page
-                page_data = parse_library_page(html)
+                    # Fetch page with rate limiting and retries
+                    html = self._fetch_with_retry(client, library_url)
 
-                # Extract username from first page (if parser found it, override URL-based username)
-                if page_num == 1:
-                    parsed_username = page_data.get('username', None)
-                    if parsed_username and parsed_username != 'unknown':
-                        username = parsed_username
+                    # Parse page
+                    page_data = parse_library_page(html)
 
-                # Collect books
-                books_on_page = page_data.get('books', [])
+                    # Collect books
+                    books_on_page = page_data.get('books', [])
 
-                # Apply limit if specified
-                if self.limit is not None:
-                    remaining = self.limit - len(all_books)
-                    if remaining <= 0:
+                    # Set reading status for each book based on the shelf being scraped
+                    for book in books_on_page:
+                        book['reading_status'] = reading_status
+
+                    # Filter out duplicates (books may appear in multiple shelves)
+                    new_books = []
+                    for book in books_on_page:
+                        book_id = book.get('goodreads_id')
+                        if book_id and book_id not in seen_book_ids:
+                            new_books.append(book)
+                            seen_book_ids.add(book_id)
+                            shelf_books.append(book)
+
+                            # Apply per-shelf limit
+                            if self.limit is not None and len(shelf_books) >= self.limit:
+                                break
+
+                    all_books.extend(new_books)
+
+                    logger.info(
+                        "Page scraped",
+                        shelf=shelf_slug,
+                        page=page_num,
+                        books_on_page=len(books_on_page),
+                        new_books=len(new_books),
+                        shelf_books=len(shelf_books),
+                        total_books=len(all_books)
+                    )
+
+                    # Progress callback
+                    if self.progress_callback:
+                        self.progress_callback(
+                            len(all_books),
+                            len(all_books),
+                            f"Scraped shelf '{shelf_slug}' page {page_num}: {len(shelf_books)} from shelf, {len(all_books)} total"
+                        )
+
+                    # Check if we've reached the per-shelf limit
+                    if self.limit is not None and len(shelf_books) >= self.limit:
+                        logger.info(
+                            "Reached per-shelf limit",
+                            shelf=shelf_slug,
+                            limit=self.limit,
+                            shelf_books=len(shelf_books)
+                        )
                         break
-                    books_on_page = books_on_page[:remaining]
 
-                all_books.extend(books_on_page)
+                    # Check for next page
+                    if not page_data.get('has_next_page', False):
+                        break
+
+                    page_num += 1
+                    total_pages_scraped += 1
 
                 logger.info(
-                    "Page scraped",
-                    page=page_num,
-                    books_on_page=len(books_on_page),
-                    total_books=len(all_books),
-                    limit=self.limit
+                    "Completed scraping shelf",
+                    shelf=shelf_slug,
+                    books_from_shelf=len(shelf_books)
                 )
 
-                # Progress callback
-                if self.progress_callback:
-                    self.progress_callback(
-                        len(all_books),
-                        self.limit or len(all_books),  # Use limit as total if set
-                        f"Scraped page {page_num}: {len(all_books)} books so far" +
-                        (f" (limit: {self.limit})" if self.limit else "")
-                    )
-
-                # Check if we've reached the limit
-                if self.limit is not None and len(all_books) >= self.limit:
-                    logger.info("Reached limit", limit=self.limit, books_scraped=len(all_books))
-                    break
-
-                # Check for next page
-                if not page_data.get('has_next_page', False):
-                    break
-
-                page_num += 1
+            logger.info(
+                "Completed scraping all shelves",
+                total_books=len(all_books),
+                shelves_scraped=len(shelves_to_scrape),
+                total_pages=total_pages_scraped
+            )
 
             # Fetch complete data from review pages and book pages
             logger.info("Fetching complete data from review and book pages",
@@ -278,7 +343,7 @@ class GoodreadsScraper:
             "Library scrape complete",
             user_id=user_id,
             total_books=library.total_books,
-            pages_scraped=page_num
+            total_pages_scraped=total_pages_scraped
         )
 
         return library
@@ -389,6 +454,27 @@ class GoodreadsScraper:
 
         html_lower = html.lower()
         return any(indicator in html_lower for indicator in private_indicators)
+
+    def _map_shelf_to_reading_status(self, shelf_slug: str) -> str | None:
+        """Map a shelf slug to a reading status string.
+
+        Args:
+            shelf_slug: Shelf slug (e.g., "to-read", "currently-reading", "read")
+
+        Returns:
+            Reading status string or None if not a standard reading status shelf
+        """
+        mapping = {
+            "to-read": "to-read",
+            "currently-reading": "currently-reading",
+            "read": "read",
+            "did-not-finish": "did-not-finish",
+            "paused": "paused",
+            "reference": "reference",
+            "to-read-next": "to-read-next",
+            "to-read-owned": "to-read-owned",
+        }
+        return mapping.get(shelf_slug)
 
     def _convert_to_models(self, raw_books: list[dict]) -> list[UserBookRelation]:
         """Convert raw book data to Pydantic models.

@@ -123,19 +123,13 @@ def cli():
     "--limit",
     type=int,
     default=None,
-    help="Limit scraping to top N books (default: scrape all books)",
+    help="Limit scraping to top N books from each shelf (default: scrape all books)",
 )
 @click.option(
     "--sort-by",
     type=click.Choice(["date-read", "date-added", "title", "author", "rating", "none"], case_sensitive=False),
     default="date-read",
     help="Sort order for books (default: date-read, most recent first)",
-)
-@click.option(
-    "--shelf",
-    type=str,
-    default="all",
-    help="Shelf to scrape (default: all). Use 'read', 'currently-reading', 'to-read', or custom shelf name",
 )
 def scrape(
     profile_url: str,
@@ -147,7 +141,6 @@ def scrape(
     no_progress: bool,
     limit: int | None,
     sort_by: str,
-    shelf: str,
 ):
     """Scrape a Goodreads user's library and export to JSON or CSV.
 
@@ -166,7 +159,7 @@ def scrape(
             --format csv --output my_library.csv
 
         \b
-        # Scrape only the first 50 books (for testing)
+        # Scrape only the first 50 books from each shelf (for testing)
         goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username \\
             --limit 50
 
@@ -185,7 +178,6 @@ def scrape(
                 max_retries=max_retries,
                 timeout=timeout,
                 limit=limit,
-                shelf=shelf,
             )
 
             # Sort books based on user preference
@@ -253,7 +245,6 @@ def scrape(
                     max_retries=max_retries,
                     timeout=timeout,
                     limit=limit,
-                    shelf=shelf,
                 )
 
                 # Sort books based on user preference

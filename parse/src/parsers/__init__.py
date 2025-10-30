@@ -11,12 +11,14 @@ from src.parsers.library_parser import (
     extract_user_metadata,
     get_next_page_url,
     parse_library_page,
+    parse_reading_status_shelves,
     parse_review_page_shelves,
 )
 
 __all__ = [
     "parse_library_page",
     "parse_review_page_shelves",
+    "parse_reading_status_shelves",
     "extract_user_metadata",
     "extract_books_from_table",
     "detect_next_page",
