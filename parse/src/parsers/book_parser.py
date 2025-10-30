@@ -31,6 +31,8 @@ def parse_book_page(html: str) -> dict[str, Any]:
         - page_count: Number of pages
         - genres: List of genre tags
         - language: Book language
+        - setting: Book setting/location
+        - literary_awards: List of literary awards (dicts with name, category, year)
         - average_rating: Goodreads community rating
         - ratings_count: Number of ratings
         - cover_image_url: URL to book cover image
@@ -89,7 +91,7 @@ def parse_book_page(html: str) -> dict[str, Any]:
 def extract_from_next_data(soup: BeautifulSoup) -> dict[str, Any]:
     """Extract book metadata from Next.js __NEXT_DATA__ Apollo state.
 
-    This contains detailed book information including publisher.
+    This contains detailed book information including publisher, setting, and awards.
 
     Args:
         soup: BeautifulSoup parsed HTML
@@ -153,6 +155,51 @@ def extract_from_next_data(soup: BeautifulSoup) -> dict[str, Any]:
                                 pass
 
                     break  # Only process first Book object
+
+            # Find the Work object (key starts with "Work:") for setting and awards
+            for key, value in apollo_state.items():
+                if key.startswith('Work:') and isinstance(value, dict):
+                    details = value.get('details')
+                    if details and isinstance(details, dict):
+                        # Setting - extract from places array
+                        if 'places' in details and isinstance(details['places'], list) and len(details['places']) > 0:
+                            first_place = details['places'][0]
+                            if isinstance(first_place, dict) and 'name' in first_place:
+                                setting_name = first_place['name']
+                                if setting_name:
+                                    next_data['setting'] = sanitize_text(setting_name, max_length=200)
+
+                        # Literary Awards - extract from awardsWon array
+                        if 'awardsWon' in details and isinstance(details['awardsWon'], list):
+                            awards = []
+                            for award_data in details['awardsWon']:
+                                if isinstance(award_data, dict):
+                                    award_name = award_data.get('name')
+                                    if award_name:
+                                        # Extract category (may be in 'category' field)
+                                        category = award_data.get('category')
+
+                                        # Extract year from awardedAt timestamp (milliseconds)
+                                        year = None
+                                        if 'awardedAt' in award_data:
+                                            try:
+                                                timestamp_ms = int(award_data['awardedAt'])
+                                                from datetime import datetime
+                                                award_date = datetime.fromtimestamp(timestamp_ms / 1000)
+                                                year = award_date.year
+                                            except (ValueError, TypeError, OSError):
+                                                pass
+
+                                        awards.append({
+                                            'name': sanitize_text(award_name, max_length=200),
+                                            'category': sanitize_text(category, max_length=200) if category else None,
+                                            'year': year
+                                        })
+
+                            if awards:
+                                next_data['literary_awards'] = awards
+
+                    break  # Only process first Work object
 
         except (json.JSONDecodeError, KeyError, AttributeError) as e:
             # If JSON parsing fails, return empty dict

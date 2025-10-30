@@ -8,6 +8,19 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator
 from pydantic_extra_types.isbn import ISBN
 
 
+class LiteraryAward(BaseModel):
+    """Literary award received by a book.
+
+    Attributes:
+        name: Award name (e.g., "Costa Book Award")
+        category: Award category or designation (e.g., "Novel", "Shortlist")
+        year: Year the award was given (optional)
+    """
+    name: str = Field(min_length=1, max_length=200, description="Award name")
+    category: str | None = Field(None, max_length=200, description="Award category")
+    year: int | None = Field(None, ge=1000, le=2100, description="Year awarded")
+
+
 class Book(BaseModel):
     """Book entity with core and extended metadata fields.
 
@@ -22,6 +35,8 @@ class Book(BaseModel):
         publisher: Publisher name (max 200 chars)
         page_count: Number of pages (must be positive)
         language: Book language (ISO 639-1 code preferred)
+        setting: Book setting/location (e.g., "Switzerland", "New York")
+        literary_awards: List of literary awards won or nominated
         genres: List of genre tags (max 50 genres)
         average_rating: Goodreads community average (0.0-5.0)
         ratings_count: Total number of ratings on Goodreads
@@ -42,6 +57,11 @@ class Book(BaseModel):
     publisher: str | None = Field(None, max_length=500, description="Publisher name")
     page_count: int | None = Field(None, ge=1, description="Number of pages")
     language: str | None = Field(None, description="Book language (ISO 639-1)")
+    setting: str | None = Field(None, max_length=200, description="Book setting/location")
+    literary_awards: list[LiteraryAward] = Field(
+        default_factory=list,
+        description="Literary awards won or nominated"
+    )
     genres: list[str] = Field(
         default_factory=list,
         max_length=100,

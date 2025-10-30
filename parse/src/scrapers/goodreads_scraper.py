@@ -263,11 +263,24 @@ class GoodreadsScraper:
                         review_html = self._fetch_with_retry(client, review_url)
 
                         # Extract all shelves and dates from review page
-                        shelves, reading_status, dates = parse_review_page_shelves(review_html)
+                        shelves, reading_status_from_review, dates = parse_review_page_shelves(review_html)
+
+                        # Preserve the shelf-based reading_status (already set based on which shelf we scraped from)
+                        # Only use review page reading_status if we don't have one yet
+                        if not book_data.get('reading_status'):
+                            book_data['reading_status'] = reading_status_from_review
+
+                        # Ensure the reading status shelf is included in the shelves list
+                        reading_status = book_data.get('reading_status')
+                        if reading_status:
+                            # Check if the reading status shelf is already in the list
+                            # shelves is a list of shelf name strings at this point
+                            if reading_status not in shelves:
+                                # Add the reading status as the first shelf
+                                shelves.insert(0, reading_status)
 
                         # Update book data with complete shelf information and dates
                         book_data['shelves'] = shelves
-                        book_data['reading_status'] = reading_status
                         book_data['date_added'] = dates.get('date_added')
                         book_data['date_started'] = dates.get('date_started')
                         book_data['date_finished'] = dates.get('date_finished')
@@ -489,6 +502,13 @@ class GoodreadsScraper:
 
         for raw_book in raw_books:
             try:
+                # Convert literary_awards dicts to LiteraryAward model instances
+                from src.models.book import LiteraryAward
+                literary_awards = []
+                for award_data in raw_book.get('literary_awards', []):
+                    if isinstance(award_data, dict):
+                        literary_awards.append(LiteraryAward(**award_data))
+
                 # Create Book model with all available fields
                 book = Book(
                     goodreads_id=raw_book.get('goodreads_id', ''),
@@ -501,6 +521,8 @@ class GoodreadsScraper:
                     publisher=raw_book.get('publisher'),
                     page_count=raw_book.get('page_count'),
                     language=raw_book.get('language'),
+                    setting=raw_book.get('setting'),
+                    literary_awards=literary_awards,
                     genres=raw_book.get('genres', []),
                     average_rating=raw_book.get('average_rating'),
                     ratings_count=raw_book.get('ratings_count'),
@@ -510,8 +532,14 @@ class GoodreadsScraper:
                 # Create Shelf models
                 shelf_names = raw_book.get('shelves', [])
                 shelves = []
+                # All reading status shelves are considered built-in
+                builtin_shelves = [
+                    'read', 'currently-reading', 'to-read',
+                    'did-not-finish', 'paused', 'reference',
+                    'to-read-next', 'to-read-owned'
+                ]
                 for shelf_name in shelf_names:
-                    is_builtin = shelf_name in ['read', 'currently-reading', 'to-read']
+                    is_builtin = shelf_name in builtin_shelves
                     shelves.append(Shelf(name=shelf_name, is_builtin=is_builtin))
 
                 # Model requires at least 1 shelf - use 'unknown' as fallback if none found

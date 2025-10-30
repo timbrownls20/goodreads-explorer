@@ -9,17 +9,27 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class ReadingStatus(str, Enum):
-    """Built-in Goodreads reading status enum.
+    """Goodreads reading status enum.
 
-    These correspond to the three default shelves on Goodreads:
+    These correspond to the reading status shelves on Goodreads:
     - READ: Book has been finished
     - CURRENTLY_READING: Book is being read now
     - TO_READ: Book is on the to-read list
+    - DID_NOT_FINISH: Book was started but not completed
+    - PAUSED: Book reading is temporarily paused
+    - REFERENCE: Book is used as reference material
+    - TO_READ_NEXT: Book is queued to read next
+    - TO_READ_OWNED: Book is owned and to be read
     """
 
     READ = "read"
     CURRENTLY_READING = "currently-reading"
     TO_READ = "to-read"
+    DID_NOT_FINISH = "did-not-finish"
+    PAUSED = "paused"
+    REFERENCE = "reference"
+    TO_READ_NEXT = "to-read-next"
+    TO_READ_OWNED = "to-read-owned"
 
 
 class Shelf(BaseModel):
