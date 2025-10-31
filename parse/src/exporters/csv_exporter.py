@@ -115,9 +115,10 @@ def library_to_csv_rows(library: Library) -> list[dict]:
                 "likes_count": user_book.review.likes_count if user_book.review else "",
 
                 # Reading dates
+                # For books with multiple reads, use the most recent read record
                 "date_added": _format_datetime(user_book.date_added),
-                "date_started": _format_datetime(user_book.date_started),
-                "date_finished": _format_datetime(user_book.date_finished),
+                "date_started": _format_datetime(user_book.read_records[-1].date_started) if user_book.read_records else "",
+                "date_finished": _format_datetime(user_book.read_records[-1].date_finished) if user_book.read_records else "",
 
                 # Export metadata
                 "scraped_at": _format_datetime(library.scraped_at),

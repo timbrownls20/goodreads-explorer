@@ -12,6 +12,48 @@ from src.models.book import Book
 from src.models.shelf import ReadingStatus, Shelf
 
 
+class ReadRecord(BaseModel):
+    """A single instance of reading a book.
+
+    Captures one complete read-through of a book with start and finish dates.
+    A book can have multiple ReadRecords if read multiple times.
+
+    Attributes:
+        date_started: When this reading started (optional)
+        date_finished: When this reading finished (optional)
+    """
+
+    date_started: datetime | None = Field(None, description="Date started this read")
+    date_finished: datetime | None = Field(None, description="Date finished this read")
+
+    @model_validator(mode='after')
+    def validate_dates(self) -> 'ReadRecord':
+        """Validate that date_started <= date_finished if both exist.
+
+        Returns:
+            Self for method chaining
+
+        Raises:
+            ValueError: If date_started > date_finished
+        """
+        if self.date_started and self.date_finished:
+            if self.date_started > self.date_finished:
+                raise ValueError(
+                    f"date_started ({self.date_started}) cannot be after "
+                    f"date_finished ({self.date_finished})"
+                )
+        return self
+
+    class Config:
+        """Pydantic model configuration."""
+        json_schema_extra = {
+            "example": {
+                "date_started": "2024-03-10T09:00:00Z",
+                "date_finished": "2024-03-14T22:00:00Z"
+            }
+        }
+
+
 class Review(BaseModel):
     """User's review of a book.
 
@@ -49,8 +91,7 @@ class UserBookRelation(BaseModel):
         shelves: List of shelves this book is on (min 1 shelf required)
         review: User's review (optional)
         date_added: When book was added to library
-        date_started: When user started reading
-        date_finished: When user finished reading
+        read_records: List of read instances (empty list if not read, can have multiple for re-reads)
     """
 
     book: Book = Field(description="The book entity")
@@ -59,8 +100,7 @@ class UserBookRelation(BaseModel):
     shelves: list[Shelf] = Field(min_length=1, max_length=100, description="Shelves this book is on")
     review: Review | None = Field(None, description="User's review if exists")
     date_added: datetime | None = Field(None, description="Date added to library")
-    date_started: datetime | None = Field(None, description="Date started reading")
-    date_finished: datetime | None = Field(None, description="Date finished reading")
+    read_records: list[ReadRecord] = Field(default_factory=list, description="List of read instances (can be multiple for re-reads)")
     scraped_at: datetime | None = Field(None, description="Timestamp when book data was scraped")
 
     @model_validator(mode='after')
@@ -68,24 +108,14 @@ class UserBookRelation(BaseModel):
         """Validate date ordering constraints.
 
         Rules:
-        - date_started must be <= date_finished (hard error)
-        - date_added should be <= date_started (soft warning, not enforced)
+        - Each ReadRecord validates its own date_started <= date_finished
+        - date_added should be <= first read start date (soft warning, not enforced)
 
         Returns:
             Self for method chaining
-
-        Raises:
-            ValueError: If date_started > date_finished
         """
-        if self.date_started and self.date_finished:
-            if self.date_started > self.date_finished:
-                raise ValueError(
-                    f"date_started ({self.date_started}) cannot be after "
-                    f"date_finished ({self.date_finished})"
-                )
-
-        # Soft validation: warn if date_added > date_started (logged, not error)
-        # This will be handled by logging in the scraper
+        # Date validation for individual read records is handled by ReadRecord model
+        # Soft validation for date_added vs read records will be handled by logging in the scraper
         return self
 
     @model_validator(mode='after')
@@ -152,7 +182,11 @@ class UserBookRelation(BaseModel):
                     "likes_count": 5
                 },
                 "date_added": "2024-03-01T12:00:00Z",
-                "date_started": "2024-03-10T09:00:00Z",
-                "date_finished": "2024-03-14T22:00:00Z"
+                "read_records": [
+                    {
+                        "date_started": "2024-03-10T09:00:00Z",
+                        "date_finished": "2024-03-14T22:00:00Z"
+                    }
+                ]
             }
         }

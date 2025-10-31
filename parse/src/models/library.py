@@ -156,8 +156,7 @@ class Library(BaseModel):
                         ],
                         "review": None,
                         "date_added": "2024-03-01T12:00:00Z",
-                        "date_started": None,
-                        "date_finished": None
+                        "read_records": []
                     }
                 ],
                 "scraped_at": "2025-10-28T12:00:00Z",

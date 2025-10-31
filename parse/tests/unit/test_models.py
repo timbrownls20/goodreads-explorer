@@ -8,7 +8,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from src.models import Book, Library, ReadingStatus, Shelf, Review, UserBookRelation
+from src.models import Book, Library, ReadingStatus, Shelf, ReadRecord, Review, UserBookRelation
 
 
 class TestBook:
@@ -265,21 +265,21 @@ class TestUserBookRelation:
         shelf = Shelf(name="read", is_builtin=True)
 
         # Valid dates (started before finished)
+        read_record = ReadRecord(
+            date_started=datetime(2024, 1, 1),
+            date_finished=datetime(2024, 1, 15)
+        )
         user_book = UserBookRelation(
             book=book,
             reading_status=ReadingStatus.READ,
             shelves=[shelf],
-            date_started=datetime(2024, 1, 1),
-            date_finished=datetime(2024, 1, 15)
+            read_records=[read_record]
         )
-        assert user_book.date_started < user_book.date_finished
+        assert user_book.read_records[0].date_started < user_book.read_records[0].date_finished
 
-        # Invalid dates (started after finished)
+        # Invalid dates (started after finished) - should raise error at ReadRecord level
         with pytest.raises(ValidationError):
-            UserBookRelation(
-                book=book,
-                reading_status=ReadingStatus.READ,
-                shelves=[shelf],
+            ReadRecord(
                 date_started=datetime(2024, 1, 15),
                 date_finished=datetime(2024, 1, 1)
             )

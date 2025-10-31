@@ -10,7 +10,7 @@ from typing import Callable
 import httpx
 
 from src.exceptions import InvalidURLError, NetworkError, PrivateProfileError, RateLimitError
-from src.models import Library, UserBookRelation, Book, Shelf, ReadingStatus
+from src.models import Library, UserBookRelation, Book, Shelf, ReadingStatus, ReadRecord
 from src.parsers import parse_library_page, parse_review_page_shelves, parse_book_page, parse_reading_status_shelves
 from src.scrapers.pagination import detect_pagination, get_next_page_url, build_library_url
 from src.validators import validate_goodreads_profile_url, extract_user_id_from_url
@@ -38,6 +38,7 @@ class GoodreadsScraper:
         timeout: int = 30,
         progress_callback: Callable[[int, int, str], None] | None = None,
         limit: int | None = None,
+        sort: str | None = None,
     ):
         """Initialize scraper with configuration.
 
@@ -48,12 +49,14 @@ class GoodreadsScraper:
             progress_callback: Optional callback for progress updates
                                Signature: callback(current: int, total: int, message: str)
             limit: Maximum number of books to scrape from each shelf (default None = all books)
+            sort: Goodreads sort parameter (e.g., "read_count", "date_read", "date_added", "rating")
         """
         self.rate_limit_delay = rate_limit_delay
         self.max_retries = max_retries
         self.timeout = timeout
         self.progress_callback = progress_callback
         self.limit = limit
+        self.sort = sort
         self.last_request_time = 0.0
 
     def scrape_library(self, profile_url: str) -> Library:
@@ -111,7 +114,7 @@ class GoodreadsScraper:
 
         with httpx.Client(timeout=self.timeout, headers=headers) as client:
             # First, fetch the library page to get the list of reading status shelves
-            initial_library_url = build_library_url(normalized_url, page=1, shelf="all")
+            initial_library_url = build_library_url(normalized_url, page=1, shelf="all", sort=self.sort)
             logger.info("Fetching initial library page to discover shelves", url=initial_library_url)
 
             initial_html = self._fetch_with_retry(client, initial_library_url)
@@ -161,7 +164,7 @@ class GoodreadsScraper:
                 page_num = 1
                 while True:
                     # Build library URL for current page and shelf
-                    library_url = build_library_url(normalized_url, page=page_num, shelf=shelf_slug)
+                    library_url = build_library_url(normalized_url, page=page_num, shelf=shelf_slug, sort=self.sort)
 
                     logger.info(
                         "Fetching library page",
@@ -282,8 +285,16 @@ class GoodreadsScraper:
                         # Update book data with complete shelf information and dates
                         book_data['shelves'] = shelves
                         book_data['date_added'] = dates.get('date_added')
-                        book_data['date_started'] = dates.get('date_started')
-                        book_data['date_finished'] = dates.get('date_finished')
+                        read_records = dates.get('read_records', [])
+
+                        # If book is marked as "read" but has no read records, create one with null dates
+                        # This handles cases where a book was marked as read without recording specific dates
+                        if reading_status == 'read' and not read_records:
+                            read_records = [{'date_started': None, 'date_finished': None}]
+                            logger.debug("Created null-date read record for book marked as read",
+                                       book_id=book_data.get('goodreads_id'))
+
+                        book_data['read_records'] = read_records
 
                         # Also extract publisher from review page if present
                         review_metadata = parse_book_page(review_html)
@@ -560,6 +571,14 @@ class GoodreadsScraper:
                     except (ValueError, TypeError):
                         pass
 
+                # Create ReadRecord objects from raw read records
+                read_records = []
+                for record_dict in raw_book.get('read_records', []):
+                    read_records.append(ReadRecord(
+                        date_started=record_dict.get('date_started'),
+                        date_finished=record_dict.get('date_finished')
+                    ))
+
                 # Create UserBookRelation
                 user_book = UserBookRelation(
                     book=book,
@@ -568,8 +587,7 @@ class GoodreadsScraper:
                     shelves=shelves,
                     review=None,  # Reviews handled in User Story 3
                     date_added=raw_book.get('date_added'),
-                    date_started=raw_book.get('date_started'),
-                    date_finished=raw_book.get('date_finished'),
+                    read_records=read_records,
                     scraped_at=scraped_at
                 )
 

@@ -32,35 +32,25 @@ logger = get_logger(__name__)
 console = Console()
 
 
-def sort_library_books(library, sort_by: str):
-    """Sort library books based on specified criteria.
+def map_cli_sort_to_goodreads_sort(sort_by: str) -> str | None:
+    """Map CLI sort option to Goodreads sort parameter.
 
     Args:
-        library: Library object to sort
-        sort_by: Sort criterion (date-read, date-added, title, author, rating, none)
+        sort_by: CLI sort option (date-read, date-added, title, author, rating, read-count, none)
 
     Returns:
-        Library with sorted user_books
+        Goodreads sort parameter or None
     """
-    if sort_by == "none":
-        return library
-
-    sort_key_map = {
-        "date-read": lambda ub: (ub.date_finished or datetime.min, ub.book.title),
-        "date-added": lambda ub: (ub.date_added or datetime.min, ub.book.title),
-        "title": lambda ub: ub.book.title.lower(),
-        "author": lambda ub: ub.book.author.lower(),
-        "rating": lambda ub: (ub.user_rating or 0, ub.book.title),
+    sort_map = {
+        "date-read": "date_read",
+        "date-added": "date_added",
+        "title": "title",
+        "author": "author",
+        "rating": "rating",
+        "read-count": "read_count",
+        "none": None,
     }
-
-    if sort_by not in sort_key_map:
-        return library
-
-    # Sort based on criterion (descending for dates and rating, ascending for text)
-    reverse = sort_by in ["date-read", "date-added", "rating"]
-    library.user_books.sort(key=sort_key_map[sort_by], reverse=reverse)
-
-    return library
+    return sort_map.get(sort_by)
 
 
 @click.group()
@@ -127,9 +117,9 @@ def cli():
 )
 @click.option(
     "--sort-by",
-    type=click.Choice(["date-read", "date-added", "title", "author", "rating", "none"], case_sensitive=False),
-    default="date-read",
-    help="Sort order for books (default: date-read, most recent first)",
+    type=click.Choice(["date-read", "date-added", "title", "author", "rating", "read-count", "none"], case_sensitive=False),
+    default="none",
+    help="Sort order for books. Applies server-side to all results (default: none). Options: date-read, date-added, title, author, rating, read-count, none",
 )
 def scrape(
     profile_url: str,
@@ -169,6 +159,9 @@ def scrape(
             --rate-limit 2.0
     """
     try:
+        # Map CLI sort option to Goodreads sort parameter
+        goodreads_sort = map_cli_sort_to_goodreads_sort(sort_by)
+
         # Create progress bar unless disabled
         if no_progress:
             # No progress bar - just scrape
@@ -178,10 +171,8 @@ def scrape(
                 max_retries=max_retries,
                 timeout=timeout,
                 limit=limit,
+                sort=goodreads_sort,
             )
-
-            # Sort books based on user preference
-            library = sort_library_books(library, sort_by)
 
             # Export
             final_output = output or Path(f"{library.username}_library.{format}")
@@ -245,10 +236,8 @@ def scrape(
                     max_retries=max_retries,
                     timeout=timeout,
                     limit=limit,
+                    sort=goodreads_sort,
                 )
-
-                # Sort books based on user preference
-                library = sort_library_books(library, sort_by)
 
                 # Update progress - scraping complete
                 progress.update(

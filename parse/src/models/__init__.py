@@ -7,7 +7,7 @@ Per Constitution Principle I: Data-First Development.
 from src.models.book import Book, LiteraryAward
 from src.models.library import Library
 from src.models.shelf import ReadingStatus, Shelf
-from src.models.user_book import Review, UserBookRelation
+from src.models.user_book import ReadRecord, Review, UserBookRelation
 
 __all__ = [
     "Book",
@@ -15,6 +15,7 @@ __all__ = [
     "Library",
     "ReadingStatus",
     "Shelf",
+    "ReadRecord",
     "Review",
     "UserBookRelation",
 ]

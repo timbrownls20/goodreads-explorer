@@ -102,20 +102,23 @@ def extract_page_number(url: str) -> int:
     return 1
 
 
-def build_library_url(profile_url: str, page: int = 1, shelf: str = "all") -> str:
-    """Build library list URL with pagination and shelf filter.
+def build_library_url(profile_url: str, page: int = 1, shelf: str = "all", sort: str | None = None) -> str:
+    """Build library list URL with pagination, shelf filter, and sort order.
 
     Args:
         profile_url: Goodreads profile URL (e.g., /user/show/12345-username)
         page: Page number (1-indexed)
         shelf: Shelf to filter by (default "all")
+        sort: Sort parameter for Goodreads (e.g., "read_count", "date_read", "date_added", "rating")
 
     Returns:
-        Full library URL with pagination parameters
+        Full library URL with pagination and sort parameters
 
     Examples:
         >>> build_library_url("https://www.goodreads.com/user/show/12345", page=2)
         'https://www.goodreads.com/review/list/12345?page=2&shelf=all'
+        >>> build_library_url("https://www.goodreads.com/user/show/12345", shelf="read", sort="read_count")
+        'https://www.goodreads.com/review/list/12345?shelf=read&sort=read_count'
     """
     # Extract user ID from profile URL
     if '/user/show/' in profile_url:
@@ -133,6 +136,8 @@ def build_library_url(profile_url: str, page: int = 1, shelf: str = "all") -> st
         params.append(f"shelf={shelf}")
     elif shelf == "all":
         params.append("shelf=all")
+    if sort:
+        params.append(f"sort={sort}")
 
     if params:
         return f"{base_url}?{'&'.join(params)}"
