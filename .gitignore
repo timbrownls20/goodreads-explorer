@@ -65,7 +65,6 @@ Thumbs.db
 
 # Project specific
 exports/
-*.json
 *.csv
 !contracts/*.json
 !*-schema.json
