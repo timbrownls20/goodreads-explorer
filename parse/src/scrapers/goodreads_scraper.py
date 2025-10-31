@@ -528,7 +528,7 @@ class GoodreadsScraper:
                     goodreads_url=raw_book.get('goodreads_url', 'https://www.goodreads.com'),
                     isbn=raw_book.get('isbn'),
                     isbn13=raw_book.get('isbn13'),
-                    publication_year=raw_book.get('publication_year'),
+                    publication_date=raw_book.get('publication_date'),
                     publisher=raw_book.get('publisher'),
                     page_count=raw_book.get('page_count'),
                     language=raw_book.get('language'),

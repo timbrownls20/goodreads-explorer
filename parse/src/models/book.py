@@ -31,7 +31,7 @@ class Book(BaseModel):
         additional_authors: List of co-authors, editors, etc.
         isbn: ISBN-10 or ISBN-13 (validated)
         isbn13: ISBN-13 specifically if different
-        publication_year: Year published (1000-2100 range)
+        publication_date: Publication date string (e.g., "April 22, 2003")
         publisher: Publisher name (max 200 chars)
         page_count: Number of pages (must be positive)
         language: Book language (ISO 639-1 code preferred)
@@ -53,7 +53,7 @@ class Book(BaseModel):
     )
     isbn: ISBN | None = Field(None, description="ISBN-10 or ISBN-13")
     isbn13: str | None = Field(None, pattern=r'^\d{13}$', description="ISBN-13 format")
-    publication_year: int | None = Field(None, ge=1000, le=2100, description="Year published")
+    publication_date: str | None = Field(None, description="Publication date (e.g., 'April 22, 2003')")
     publisher: str | None = Field(None, max_length=500, description="Publisher name")
     page_count: int | None = Field(None, ge=1, description="Number of pages")
     language: str | None = Field(None, description="Book language (ISO 639-1)")
@@ -121,7 +121,7 @@ class Book(BaseModel):
                 "additional_authors": [],
                 "isbn": None,
                 "isbn13": "9780525478812",
-                "publication_year": 2012,
+                "publication_date": "January 10, 2012",
                 "publisher": "Dutton Books",
                 "page_count": 313,
                 "language": "en",

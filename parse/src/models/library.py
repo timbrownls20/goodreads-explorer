@@ -139,7 +139,7 @@ class Library(BaseModel):
                             "additional_authors": [],
                             "isbn": None,
                             "isbn13": "9780525478812",
-                            "publication_year": 2012,
+                            "publication_date": "January 10, 2012",
                             "publisher": "Dutton Books",
                             "page_count": 313,
                             "language": "en",

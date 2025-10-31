@@ -10,7 +10,7 @@ from typing import Any
 import json
 import re
 
-from src.validators import sanitize_text, validate_isbn, validate_publication_year
+from src.validators import sanitize_text, validate_isbn
 
 
 def parse_book_page(html: str) -> dict[str, Any]:
@@ -26,7 +26,7 @@ def parse_book_page(html: str) -> dict[str, Any]:
         Dictionary containing book metadata:
         - isbn: ISBN number
         - isbn13: ISBN-13 format
-        - publication_year: Year published
+        - publication_date: Publication date string (e.g., "April 22, 2003")
         - publisher: Publisher name
         - page_count: Number of pages
         - genres: List of genre tags
@@ -144,13 +144,14 @@ def extract_from_next_data(soup: BeautifulSoup) -> dict[str, Any]:
                             if lang_name:
                                 next_data['language'] = sanitize_text(lang_name)
 
-                        # Publication year from publicationTime (milliseconds timestamp)
+                        # Publication date from publicationTime (milliseconds timestamp)
                         if 'publicationTime' in details:
                             try:
                                 timestamp_ms = int(details['publicationTime'])
                                 from datetime import datetime
                                 pub_date = datetime.fromtimestamp(timestamp_ms / 1000)
-                                next_data['publication_year'] = validate_publication_year(pub_date.year)
+                                # Format as "Month Day, Year" (e.g., "April 22, 2003")
+                                next_data['publication_date'] = pub_date.strftime('%B %d, %Y')
                             except (ValueError, TypeError, OSError):
                                 pass
 
@@ -315,7 +316,7 @@ def extract_isbn(soup: BeautifulSoup) -> dict[str, Any]:
 
 
 def extract_publication_details(soup: BeautifulSoup) -> dict[str, Any]:
-    """Extract publication year, publisher, page count, language.
+    """Extract publication date, publisher, page count, language.
 
     Args:
         soup: BeautifulSoup parsed HTML
@@ -326,25 +327,30 @@ def extract_publication_details(soup: BeautifulSoup) -> dict[str, Any]:
     import re
 
     pub_data = {
-        "publication_year": None,
+        "publication_date": None,
         "publisher": None,
         "page_count": None,
         "language": None
     }
 
     # Look for publication info with data-testid
+    # Example: "First published April 22, 2003"
     pub_info = soup.find('p', {'data-testid': 'publicationInfo'})
     if pub_info:
-        text = pub_info.get_text()
+        text = pub_info.get_text(strip=True)
 
-        # Extract year (4 digits)
-        year_match = re.search(r'\b(1[0-9]{3}|20[0-9]{2})\b', text)
-        if year_match:
-            try:
-                year = int(year_match.group(1))
-                pub_data['publication_year'] = validate_publication_year(year)
-            except (ValueError, TypeError):
-                pass
+        # Extract full date (e.g., "April 22, 2003")
+        # Pattern: "First published [Month Day, Year]" or "Published [Month Day, Year]"
+        date_match = re.search(r'(?:First published|Published)\s+(.+?)(?:\s+by|$)', text)
+        if date_match:
+            publication_date = date_match.group(1).strip()
+            pub_data['publication_date'] = sanitize_text(publication_date)
+        elif text:
+            # Fallback: if no "First published" prefix, try to extract the date directly
+            # Look for pattern like "April 22, 2003"
+            date_pattern = re.search(r'([A-Z][a-z]+\s+\d{1,2},\s+\d{4})', text)
+            if date_pattern:
+                pub_data['publication_date'] = sanitize_text(date_pattern.group(1))
 
         # Extract publisher (text after "by")
         if ' by ' in text:

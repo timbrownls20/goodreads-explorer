@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 # CSV headers per contract specification
 CSV_HEADERS = [
     "user_id", "username", "goodreads_book_id", "title", "author",
-    "additional_authors", "isbn", "isbn13", "publication_year", "publisher",
+    "additional_authors", "isbn", "isbn13", "publication_date", "publisher",
     "page_count", "language", "genres", "average_rating", "ratings_count",
     "user_rating", "reading_status", "shelf_name", "is_builtin_shelf",
     "has_review", "review_text_preview", "review_date", "likes_count",
@@ -92,7 +92,7 @@ def library_to_csv_rows(library: Library) -> list[dict]:
                 "additional_authors": _format_list_field(user_book.book.additional_authors),
                 "isbn": str(user_book.book.isbn) if user_book.book.isbn else "",
                 "isbn13": user_book.book.isbn13 or "",
-                "publication_year": user_book.book.publication_year or "",
+                "publication_date": user_book.book.publication_date or "",
                 "publisher": user_book.book.publisher or "",
                 "page_count": user_book.book.page_count or "",
                 "language": user_book.book.language or "",
