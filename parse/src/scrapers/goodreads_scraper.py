@@ -7,6 +7,7 @@ Per Constitution Principles: IV (Integration), V (Observability), VI (Validation
 import time
 from datetime import datetime
 from typing import Callable
+from pathlib import Path
 import httpx
 
 from src.exceptions import InvalidURLError, NetworkError, PrivateProfileError, RateLimitError
@@ -39,6 +40,9 @@ class GoodreadsScraper:
         progress_callback: Callable[[int, int, str], None] | None = None,
         limit: int | None = None,
         sort: str | None = None,
+        sort_by: str | None = None,
+        save_individual_books: bool = False,
+        output_dir: Path | str | None = None,
     ):
         """Initialize scraper with configuration.
 
@@ -50,6 +54,9 @@ class GoodreadsScraper:
                                Signature: callback(current: int, total: int, message: str)
             limit: Maximum number of books to scrape from each shelf (default None = all books)
             sort: Goodreads sort parameter (e.g., "read_count", "date_read", "date_added", "rating")
+            sort_by: CLI sort option (e.g., "random", "none", etc.) - used for client-side sorting
+            save_individual_books: If True, save each book to a separate file immediately after parsing
+            output_dir: Directory to save individual book files (required if save_individual_books is True)
         """
         self.rate_limit_delay = rate_limit_delay
         self.max_retries = max_retries
@@ -57,7 +64,14 @@ class GoodreadsScraper:
         self.progress_callback = progress_callback
         self.limit = limit
         self.sort = sort
+        self.sort_by = sort_by
+        self.save_individual_books = save_individual_books
+        self.output_dir = Path(output_dir) if output_dir else None
         self.last_request_time = 0.0
+
+        # Create output directory if needed
+        if self.save_individual_books and self.output_dir:
+            self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def scrape_library(self, profile_url: str) -> Library:
         """Scrape complete library from Goodreads profile.
@@ -353,7 +367,13 @@ class GoodreadsScraper:
                     )
 
         # Convert raw book data to models
-        user_books = self._convert_to_models(all_books)
+        user_books = self._convert_to_models(all_books, username)
+
+        # Shuffle if random sort was requested
+        if self.sort_by == "random":
+            import random
+            random.shuffle(user_books)
+            logger.info("Shuffled books for random sort", total_books=len(user_books))
 
         # Create Library aggregate
         library = Library(
@@ -362,6 +382,31 @@ class GoodreadsScraper:
             profile_url=normalized_url,
             user_books=user_books
         )
+
+        # Save library metadata if individual book saving is enabled
+        if self.save_individual_books and self.output_dir:
+            try:
+                import json
+                metadata = {
+                    'user_id': library.user_id,
+                    'username': library.username,
+                    'profile_url': str(library.profile_url),
+                    'total_books': library.total_books,
+                    'scraped_at': library.scraped_at.isoformat() if library.scraped_at else None,
+                    'schema_version': library.schema_version
+                }
+                metadata_path = self.output_dir / '_library_metadata.json'
+                with open(metadata_path, 'w', encoding='utf-8') as f:
+                    json.dump(metadata, f, indent=2, ensure_ascii=False)
+                logger.info(
+                    "Saved library metadata",
+                    metadata_path=str(metadata_path)
+                )
+            except Exception as e:
+                logger.error(
+                    "Failed to save library metadata",
+                    error=str(e)
+                )
 
         logger.info(
             "Library scrape complete",
@@ -500,11 +545,12 @@ class GoodreadsScraper:
         }
         return mapping.get(shelf_slug)
 
-    def _convert_to_models(self, raw_books: list[dict]) -> list[UserBookRelation]:
+    def _convert_to_models(self, raw_books: list[dict], username: str = None) -> list[UserBookRelation]:
         """Convert raw book data to Pydantic models.
 
         Args:
             raw_books: List of book data dictionaries from parser
+            username: Username for saving individual book files
 
         Returns:
             List of UserBookRelation models
@@ -592,6 +638,23 @@ class GoodreadsScraper:
                 )
 
                 user_books.append(user_book)
+
+                # Save individual book file if requested
+                if self.save_individual_books and self.output_dir:
+                    try:
+                        from src.exporters.json_exporter import export_book_to_file
+                        export_book_to_file(user_book, self.output_dir, username)
+                        logger.debug(
+                            "Saved book to file",
+                            goodreads_id=user_book.book.goodreads_id,
+                            title=user_book.book.title
+                        )
+                    except Exception as e:
+                        logger.error(
+                            "Failed to save book file",
+                            goodreads_id=user_book.book.goodreads_id,
+                            error=str(e)
+                        )
 
             except Exception as e:
                 logger.warning(

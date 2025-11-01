@@ -69,3 +69,4 @@ exports/
 !contracts/*.json
 !*-schema.json
 /.specify
+/parse/tim-brown_library

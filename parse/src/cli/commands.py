@@ -36,10 +36,10 @@ def map_cli_sort_to_goodreads_sort(sort_by: str) -> str | None:
     """Map CLI sort option to Goodreads sort parameter.
 
     Args:
-        sort_by: CLI sort option (date-read, date-added, title, author, rating, read-count, none)
+        sort_by: CLI sort option (date-read, date-added, title, author, rating, read-count, random, none)
 
     Returns:
-        Goodreads sort parameter or None
+        Goodreads sort parameter or None ('random' returns None as it's handled client-side)
     """
     sort_map = {
         "date-read": "date_read",
@@ -48,6 +48,7 @@ def map_cli_sort_to_goodreads_sort(sort_by: str) -> str | None:
         "author": "author",
         "rating": "rating",
         "read-count": "read_count",
+        "random": None,  # Random is handled after scraping
         "none": None,
     }
     return sort_map.get(sort_by)
@@ -117,9 +118,14 @@ def cli():
 )
 @click.option(
     "--sort-by",
-    type=click.Choice(["date-read", "date-added", "title", "author", "rating", "read-count", "none"], case_sensitive=False),
+    type=click.Choice(["date-read", "date-added", "title", "author", "rating", "read-count", "random", "none"], case_sensitive=False),
     default="none",
-    help="Sort order for books. Applies server-side to all results (default: none). Options: date-read, date-added, title, author, rating, read-count, none",
+    help="Sort order for books. Applies server-side to all results except 'random' which shuffles after scraping (default: none). Options: date-read, date-added, title, author, rating, read-count, random, none",
+)
+@click.option(
+    "--per-book-files/--single-file",
+    default=True,
+    help="Save each book as a separate JSON file in a directory (default: True, only for JSON format)",
 )
 def scrape(
     profile_url: str,
@@ -131,6 +137,7 @@ def scrape(
     no_progress: bool,
     limit: int | None,
     sort_by: str,
+    per_book_files: bool,
 ):
     """Scrape a Goodreads user's library and export to JSON or CSV.
 
@@ -159,8 +166,23 @@ def scrape(
             --rate-limit 2.0
     """
     try:
+        # Validate per-book-files option
+        if per_book_files and format.lower() != "json":
+            console.print("[red]Error:[/red] --per-book-files can only be used with JSON format")
+            raise click.Abort()
+
         # Map CLI sort option to Goodreads sort parameter
         goodreads_sort = map_cli_sort_to_goodreads_sort(sort_by)
+
+        # Determine output directory for per-book files
+        output_dir = None
+        if per_book_files:
+            # When using per-book files, output is a directory name
+            # Extract username from URL first to use as default
+            import re
+            username_match = re.search(r'/user/show/\d+-([^/?]+)', profile_url)
+            default_username = username_match.group(1) if username_match else "library"
+            output_dir = output or Path(f"{default_username}_library")
 
         # Create progress bar unless disabled
         if no_progress:
@@ -172,19 +194,25 @@ def scrape(
                 timeout=timeout,
                 limit=limit,
                 sort=goodreads_sort,
+                sort_by=sort_by,
+                save_individual_books=per_book_files,
+                output_dir=output_dir,
             )
 
-            # Export
-            final_output = output or Path(f"{library.username}_library.{format}")
-            if format.lower() == "json":
-                from src.exporters import export_to_json
-                export_to_json(library, final_output)
-            elif format.lower() == "csv":
-                from src.exporters import export_to_csv
-                export_to_csv(library, final_output)
+            # Export (if not using per-book files which saves during scraping)
+            if not per_book_files:
+                final_output = output or Path(f"{library.username}_library.{format}")
+                if format.lower() == "json":
+                    from src.exporters import export_to_json
+                    export_to_json(library, final_output)
+                elif format.lower() == "csv":
+                    from src.exporters import export_to_csv
+                    export_to_csv(library, final_output)
+                console.print(f"[green]✓[/green] Exported to: {final_output}")
+            else:
+                console.print(f"[green]✓[/green] Saved {library.total_books} books to directory: {output_dir}")
 
             console.print(f"[green]✓[/green] Scraped {library.total_books} books")
-            console.print(f"[green]✓[/green] Exported to: {final_output}")
 
         else:
             # Show progress bar
@@ -237,6 +265,9 @@ def scrape(
                     timeout=timeout,
                     limit=limit,
                     sort=goodreads_sort,
+                    sort_by=sort_by,
+                    save_individual_books=per_book_files,
+                    output_dir=output_dir,
                 )
 
                 # Update progress - scraping complete
@@ -246,37 +277,43 @@ def scrape(
                     completed=True,
                 )
 
-                # Determine final output path
-                if temp_output is None:
-                    final_output = Path(f"{library.username}_library.{format}")
-                else:
-                    final_output = temp_output
+                # Export (if not using per-book files which saves during scraping)
+                if not per_book_files:
+                    # Determine final output path
+                    if temp_output is None:
+                        final_output = Path(f"{library.username}_library.{format}")
+                    else:
+                        final_output = temp_output
 
-                # Export
-                export_task = progress.add_task(
-                    f"[cyan]Exporting to {format.upper()}...", total=None
-                )
+                    # Export
+                    export_task = progress.add_task(
+                        f"[cyan]Exporting to {format.upper()}...", total=None
+                    )
 
-                if format.lower() == "json":
-                    from src.exporters import export_to_json
-                    export_to_json(library, final_output)
-                elif format.lower() == "csv":
-                    from src.exporters import export_to_csv
-                    export_to_csv(library, final_output)
+                    if format.lower() == "json":
+                        from src.exporters import export_to_json
+                        export_to_json(library, final_output)
+                    elif format.lower() == "csv":
+                        from src.exporters import export_to_csv
+                        export_to_csv(library, final_output)
 
-                progress.update(
-                    export_task,
-                    description=f"[green]Exported to {final_output}",
-                    completed=True,
-                )
+                    progress.update(
+                        export_task,
+                        description=f"[green]Exported to {final_output}",
+                        completed=True,
+                    )
 
             # Final success message
             console.print()
             console.print(f"[bold green]Success![/bold green]")
             console.print(f"  User: {library.username}")
             console.print(f"  Books: {library.total_books}")
-            console.print(f"  Output: {final_output}")
-            console.print(f"  Format: {format.upper()}")
+            if per_book_files:
+                console.print(f"  Output: {output_dir}/ ({library.total_books} files)")
+                console.print(f"  Format: JSON (per-book files)")
+            else:
+                console.print(f"  Output: {final_output}")
+                console.print(f"  Format: {format.upper()}")
 
     except InvalidURLError as e:
         console.print(f"[bold red]Error:[/bold red] Invalid URL - {e}")
