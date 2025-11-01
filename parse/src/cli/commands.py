@@ -72,6 +72,86 @@ def cli():
 
 
 @cli.command()
+def help():
+    """Show detailed help with examples and usage information.
+
+    Displays comprehensive usage examples for the goodreads-explorer tool.
+    """
+    help_text = """
+[bold cyan]Goodreads Explorer - Usage Guide[/bold cyan]
+
+[bold]BASIC USAGE[/bold]
+  goodreads-explorer scrape <PROFILE_URL>
+
+[bold]EXAMPLES[/bold]
+
+  [dim]# Basic scrape - saves each book as a separate file (default)[/dim]
+  goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username
+
+  [dim]# Save to a single JSON file instead[/dim]
+  goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username --single-file
+
+  [dim]# Export to CSV format[/dim]
+  goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username \\
+    --format csv --output my_library.csv --single-file
+
+  [dim]# Sort books by date read[/dim]
+  goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username \\
+    --sort-by date-read
+
+  [dim]# Random shuffle of books[/dim]
+  goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username \\
+    --sort-by random
+
+  [dim]# Limit scraping to first 50 books (for testing)[/dim]
+  goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username \\
+    --limit 50
+
+  [dim]# Slower rate limiting (2 seconds between requests)[/dim]
+  goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username \\
+    --rate-limit 2.0
+
+  [dim]# Custom output directory for per-book files[/dim]
+  goodreads-explorer scrape https://www.goodreads.com/user/show/12345-username \\
+    --output my_books_directory
+
+[bold]SORT OPTIONS[/bold]
+  [cyan]date-read[/cyan]     Sort by date finished reading (most recent first)
+  [cyan]date-added[/cyan]    Sort by date added to Goodreads (most recent first)
+  [cyan]title[/cyan]         Sort alphabetically by title
+  [cyan]author[/cyan]        Sort alphabetically by author
+  [cyan]rating[/cyan]        Sort by your rating (highest first)
+  [cyan]read-count[/cyan]    Sort by number of times read
+  [cyan]random[/cyan]        Shuffle books randomly (client-side)
+  [cyan]none[/cyan]          No sorting (Goodreads default order)
+
+[bold]OUTPUT FORMATS[/bold]
+  [cyan]Per-book files[/cyan] (default): Each book saved as YYYYmmdd_Title.json
+    - Books are saved immediately as they're scraped
+    - Existing files are automatically replaced
+    - Creates a directory with individual JSON files
+
+  [cyan]Single file[/cyan] (--single-file): All books in one JSON or CSV file
+    - JSON: Complete library data in one file
+    - CSV: One row per book-shelf combination
+
+[bold]FILE NAMING[/bold]
+  Per-book files use the format: [cyan]YYYYmmdd_Title_With_Underscores.json[/cyan]
+  Examples:
+    20120110_The_Fault_in_Our_Stars.json
+    20210515_Project_Hail_Mary.json
+    00000000_Unknown_Publication_Date.json
+
+[bold]NEED MORE HELP?[/bold]
+  goodreads-explorer scrape --help    Show all available options
+  goodreads-explorer --version        Show version information
+
+[dim]For issues and feedback: https://github.com/anthropics/goodreads-explorer[/dim]
+"""
+    console.print(help_text)
+
+
+@cli.command()
 @click.argument("profile_url", type=str)
 @click.option(
     "--format",

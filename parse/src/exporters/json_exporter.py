@@ -122,18 +122,39 @@ def export_book_to_file(user_book: UserBookRelation, output_dir: Path, username:
                 pub_date_str = f"{pub_date.year:04d}{pub_date.month:02d}{pub_date.day:02d}"
             else:
                 # If it's a string, try to parse it
-                # Common formats: "2021-01-15", "January 15, 2021", "2021", etc.
+                # Common formats: "March 01, 2003", "2021-01-15", "January 15, 2021", "2021", etc.
                 pub_str = str(pub_date).strip()
 
-                # Try ISO format first
+                # Try ISO format first (YYYY-MM-DD)
                 try:
                     parsed = datetime.fromisoformat(pub_str)
                     pub_date_str = f"{parsed.year:04d}{parsed.month:02d}{parsed.day:02d}"
                 except ValueError:
-                    # Try to extract year at minimum
-                    year_match = re.search(r'\b(19|20)\d{2}\b', pub_str)
-                    if year_match:
-                        pub_date_str = f"{year_match.group(0)}0000"
+                    # Try to parse common date formats using strptime
+                    date_formats = [
+                        "%B %d, %Y",      # "March 01, 2003" or "January 15, 2021"
+                        "%b %d, %Y",      # "Mar 01, 2003" or "Jan 15, 2021"
+                        "%Y-%m-%d",       # "2003-03-01"
+                        "%m/%d/%Y",       # "03/01/2003"
+                        "%d/%m/%Y",       # "01/03/2003"
+                        "%Y",             # "2003"
+                    ]
+
+                    parsed = None
+                    for fmt in date_formats:
+                        try:
+                            parsed = datetime.strptime(pub_str, fmt)
+                            break
+                        except ValueError:
+                            continue
+
+                    if parsed:
+                        pub_date_str = f"{parsed.year:04d}{parsed.month:02d}{parsed.day:02d}"
+                    else:
+                        # Last resort: extract year at minimum
+                        year_match = re.search(r'\b(19|20)\d{2}\b', pub_str)
+                        if year_match:
+                            pub_date_str = f"{year_match.group(0)}0000"
         except Exception as e:
             logger.debug(f"Could not parse publication date: {user_book.book.publication_date}, using default")
 
