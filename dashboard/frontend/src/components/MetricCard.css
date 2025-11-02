@@ -1,0 +1,88 @@
+.metric-card {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.metric-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.metric-content {
+  flex: 1;
+}
+
+.metric-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 0.5rem 0;
+}
+
+.metric-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  margin: 0.5rem 0;
+  color: #646cff;
+}
+
+.metric-subtitle {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0.5rem 0 0 0;
+}
+
+.metric-trend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0 0;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.metric-trend:contains('+') {
+  color: #28a745;
+  background-color: rgba(40, 167, 69, 0.1);
+}
+
+.metric-trend:contains('-') {
+  color: #dc3545;
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+@media (prefers-color-scheme: light) {
+  .metric-card {
+    background-color: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+
+  .metric-card:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.2);
+  }
+
+  .metric-title {
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  .metric-subtitle {
+    color: rgba(0, 0, 0, 0.5);
+  }
+}

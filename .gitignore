@@ -63,6 +63,30 @@ Thumbs.db
 *.swo
 *~
 
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Next.js / React build
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
 # Project specific
 exports/
 *.csv
