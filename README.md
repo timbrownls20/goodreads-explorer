@@ -14,16 +14,15 @@ This is a multi-component monorepo with separate codebases for different concern
 
 ```
 goodreads-explorer/
-├── parse/          # Python scraping & parsing (Feature 001)
-│   ├── src/       # Python source (models, parsers, scrapers, exporters, CLI)
-│   ├── tests/     # Python test suite
+├── parser/             # Python scraping & parsing (Feature 001)
+│   ├── src/           # Python source (models, parsers, scrapers, exporters, CLI)
+│   ├── tests/         # Python test suite
 │   └── pyproject.toml
-├── dashboard/      # Analytics dashboard (Feature 002) - MVP COMPLETE ✅
-│   ├── frontend/  # React + TypeScript + Vite SPA
-│   ├── backend/   # NestJS + TypeORM API server
-│   ├── database/  # PostgreSQL setup & migrations
-│   └── docker-compose.yml
-└── specs/         # Feature specifications & implementation plans
+├── dashboard-ui/       # React + TypeScript + Vite SPA (Feature 002)
+├── dashboard-backend/  # NestJS + TypeORM API server (Feature 002)
+├── database/          # PostgreSQL setup & migrations (Feature 002)
+├── docker-compose.yml # Docker Compose for dashboard deployment
+└── specs/             # Feature specifications & implementation plans
 ```
 
 ### Components
@@ -35,7 +34,7 @@ goodreads-explorer/
 - Provides CLI: `goodreads-explorer scrape --user-id USER_ID`
 - **Status**: ✅ Complete (MVP)
 
-**Documentation**: [Parse Component README](./parse/README.md) | [Quickstart Guide](./specs/001-scrape-goodreads-library/quickstart.md)
+**Documentation**: [Parse Component README](./parser/README.md) | [Quickstart Guide](./specs/001-scrape-goodreads-library/quickstart.md)
 
 #### 2. Analytics Dashboard (Feature 002) - Full Stack
 - Full-stack web application for visualizing library data
@@ -46,11 +45,10 @@ goodreads-explorer/
 - **Status**: ✅ Phase 3 Complete (MVP: Upload & Summary Statistics)
 - **Planned**: Phase 4-6 (Trends, Categories, Filtering)
 
-**Documentation**: [Dashboard README](./dashboard/README.md) | [Full Spec](./specs/002-analytics-dashboard/spec.md)
+**Documentation**: [Dashboard README](./DASHBOARD.md) | [Full Spec](./specs/002-analytics-dashboard/spec.md)
 
 **Quick Start**:
 ```bash
-cd dashboard
 cp .env.example .env
 docker-compose up -d
 # Open http://localhost:3000
@@ -75,7 +73,7 @@ docker-compose up -d
 
 ```bash
 # Install scraper
-cd parse
+cd parser
 python3 -m pip install -e .
 
 # Scrape library data
@@ -90,7 +88,6 @@ goodreads-explorer scrape --user-id YOUR_GOODREADS_USER_ID
 
 ```bash
 # Start dashboard (requires Docker)
-cd dashboard
 cp .env.example .env
 docker-compose up -d
 
@@ -101,7 +98,7 @@ open http://localhost:3000
 # View analytics automatically
 ```
 
-**Documentation**: [Dashboard README](./dashboard/README.md) | [Dashboard Quickstart](./specs/002-analytics-dashboard/quickstart.md)
+**Documentation**: [Dashboard README](./DASHBOARD.md) | [Dashboard Quickstart](./specs/002-analytics-dashboard/quickstart.md)
 
 ### Full Workflow
 
@@ -114,7 +111,7 @@ open http://localhost:3000
 ### For Scraper
 - **Python 3.10 or higher** (Python 3.12+ recommended)
 - Use `python3` command (not `python`)
-- Install with: `python3 -m pip install -e parse/`
+- Install with: `python3 -m pip install -e parser/`
 
 ### For Dashboard
 - **Docker Desktop** (includes Docker Compose)
@@ -127,8 +124,8 @@ open http://localhost:3000
 
 | Component | Status | README | Quickstart | Full Spec |
 |-----------|--------|--------|------------|-----------|
-| **Scraper** | ✅ Complete (MVP) | [README](./parse/README.md) | [Quickstart](./specs/001-scrape-goodreads-library/quickstart.md) | [Spec](./specs/001-scrape-goodreads-library/spec.md) |
-| **Dashboard** | ✅ Phase 3 Complete | [README](./dashboard/README.md) | [Quickstart](./specs/002-analytics-dashboard/quickstart.md) | [Spec](./specs/002-analytics-dashboard/spec.md) |
+| **Scraper** | ✅ Complete (MVP) | [README](./parser/README.md) | [Quickstart](./specs/001-scrape-goodreads-library/quickstart.md) | [Spec](./specs/001-scrape-goodreads-library/spec.md) |
+| **Dashboard** | ✅ Phase 3 Complete | [README](./DASHBOARD.md) | [Quickstart](./specs/002-analytics-dashboard/quickstart.md) | [Spec](./specs/002-analytics-dashboard/spec.md) |
 
 ## Features
 

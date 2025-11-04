@@ -24,7 +24,7 @@ services:
   # NestJS Backend API
   backend:
     build:
-      context: ./backend
+      context: ./dashboard-backend
       dockerfile: Dockerfile
     container_name: analytics_backend
     restart: unless-stopped
@@ -42,14 +42,14 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./backend:/app
+      - ./dashboard-backend:/app
       - /app/node_modules
     command: npm run start:dev
 
   # React Frontend (Nginx serving built app)
   frontend:
     build:
-      context: ./frontend
+      context: ./dashboard-ui
       dockerfile: Dockerfile
       args:
         REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:3001/api}

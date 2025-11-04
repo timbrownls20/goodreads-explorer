@@ -93,4 +93,4 @@ exports/
 !contracts/*.json
 !*-schema.json
 /.specify
-/parse/tim-brown_library
+/parser/tim-brown_library
