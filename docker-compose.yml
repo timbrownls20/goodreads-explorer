@@ -1,3 +1,5 @@
+# Development Docker Compose - Database Only
+# API and UI run locally on dev machine
 version: '3.8'
 
 services:
@@ -9,7 +11,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-analytics}
       POSTGRES_USER: ${POSTGRES_USER:-analytics_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -20,47 +22,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # NestJS Backend API
-  backend:
-    build:
-      context: ./dashboard-backend
-      dockerfile: Dockerfile
-    container_name: analytics_backend
-    restart: unless-stopped
-    environment:
-      NODE_ENV: ${NODE_ENV:-development}
-      POSTGRES_HOST: db
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB:-analytics}
-      POSTGRES_USER: ${POSTGRES_USER:-analytics_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
-      BACKEND_PORT: ${BACKEND_PORT:-3001}
-    ports:
-      - "${BACKEND_PORT:-3001}:3001"
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - ./dashboard-backend:/app
-      - /app/node_modules
-    command: npm run start:dev
-
-  # React Frontend (Nginx serving built app)
-  frontend:
-    build:
-      context: ./dashboard-ui
-      dockerfile: Dockerfile
-      args:
-        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:3001/api}
-    container_name: analytics_frontend
-    restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-3000}:80"
-    depends_on:
-      - backend
-    environment:
-      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:3001/api}
 
 volumes:
   pgdata:

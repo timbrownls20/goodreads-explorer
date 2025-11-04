@@ -42,55 +42,81 @@ A full-stack web application that visualizes Goodreads library data with interac
 - Advanced filtering (date ranges, ratings, shelves, genres with multi-select)
 - Interactive drill-down capabilities
 
-## Quick Start (5 Minutes)
+## Quick Start (Development)
 
 ### Prerequisites
 
 **Required**:
-- Docker Desktop (includes Docker Compose)
+- Docker Desktop (includes Docker Compose) - for PostgreSQL database
   - macOS: `brew install --cask docker`
   - Linux: https://docs.docker.com/engine/install/
   - Windows: https://www.docker.com/products/docker-desktop
+- Node.js 20+ LTS
+- npm or yarn
 - Goodreads library data (JSON files from scraper feature 001)
 
-**Optional** (for local development without Docker):
-- Node.js 20+ LTS
-- PostgreSQL 15+
-- npm or yarn
-
-### Step 1: Configuration
+### Step 1: Start PostgreSQL Database
 
 ```bash
-cd dashboard
-
 # Copy environment template
 cp .env.example .env
 
-# Edit configuration (REQUIRED: Change POSTGRES_PASSWORD)
+# Edit if needed (default password is 'dev_password' for development)
 nano .env
-```
 
-### Step 2: Start Application
-
-```bash
-# Build and start all containers
+# Start PostgreSQL in Docker (database only)
 docker-compose up -d
 
-# Wait for startup (~30 seconds)
+# Wait for database startup (~10 seconds)
 docker-compose ps
 ```
 
 **Expected output**:
 ```
 NAME                  STATUS    PORTS
-analytics_db          Up        5432/tcp
-analytics_backend     Up        0.0.0.0:3001->3001/tcp
-analytics_frontend    Up        0.0.0.0:3000->80/tcp
+analytics_db          Up        0.0.0.0:5432->5432/tcp
 ```
 
-### Step 3: Access Dashboard
+### Step 2: Start Backend (Local)
 
-Open browser: **http://localhost:3000**
+```bash
+cd dashboard-backend
+
+# Install dependencies (first time only)
+npm install
+
+# Copy backend environment config
+cp .env.example .env
+
+# Run database migrations
+npm run migration:run
+
+# Start development server (with hot reload)
+npm run start:dev
+```
+
+**Backend API**: http://localhost:3001
+**Swagger UI**: http://localhost:3001/api/docs
+
+### Step 3: Start Frontend (Local)
+
+Open a new terminal:
+
+```bash
+cd dashboard-ui
+
+# Install dependencies (first time only)
+npm install
+
+# Start development server (with HMR)
+npm run dev
+```
+
+**Frontend**: http://localhost:5173 (Vite dev server)
+
+### Step 4: Access Dashboard
+
+Open browser: **http://localhost:5173**
 
 You should see:
 - Empty state with "No library data found" message
@@ -100,7 +126,7 @@ You should see:
 - API health check: http://localhost:3001/api/health
 - Swagger UI: http://localhost:3001/api/docs
 
-### Step 4: Upload Library Data
+### Step 5: Upload Library Data
 
 1. Click **"Upload Library"** button in the dashboard
 2. Browser file picker opens - select JSON files from your library export folder
@@ -124,7 +150,7 @@ Duration: 2.34s
 3 errors encountered (expand for details)
 ```
 
-### Step 5: View Analytics
+### Step 6: View Analytics
 
 After successful upload, the dashboard displays:
 
@@ -138,69 +164,91 @@ After successful upload, the dashboard displays:
 
 **Date Range**: Earliest to latest reading dates from your library
 
-## Development
+## Production Deployment (Fully Containerized)
 
-### Local Development (Without Docker)
+For production environments, use `docker-compose.prod.yml` which runs all services (database, API, and UI) in Docker containers.
 
-**1. Start PostgreSQL**:
+### Step 1: Configuration
+
 ```bash
-# Create database
-createdb analytics
-
-# Verify connection
-psql -d analytics -c "SELECT version();"
-```
-
-**2. Start Backend**:
-```bash
-cd backend
-
-# Install dependencies
-npm install
-
-# Create .env file
+# Copy environment template
 cp .env.example .env
 
-# Edit .env with your PostgreSQL credentials
+# Edit configuration (REQUIRED: Change POSTGRES_PASSWORD)
 nano .env
-
-# Run database migration
-npm run migration:run
-
-# Start development server (with hot reload)
-npm run start:dev
-
-# Backend API: http://localhost:3001
-# Swagger UI: http://localhost:3001/api/docs
 ```
 
-**3. Start Frontend** (in separate terminal):
+**Security**: Set strong passwords for:
+- `POSTGRES_PASSWORD` - Database password
+- `SESSION_SECRET` - Session encryption key (random 32+ char string)
+
+### Step 2: Start All Services
+
 ```bash
-cd frontend
+# Build and start all containers (production mode)
+docker-compose -f docker-compose.prod.yml up -d
 
-# Install dependencies
-npm install
-
-# Start development server (with HMR)
-npm run dev
-
-# Frontend: http://localhost:5173
+# Wait for startup (~30 seconds)
+docker-compose -f docker-compose.prod.yml ps
 ```
 
-**4. Access Application**:
-- Frontend dev server: http://localhost:5173
-- Backend API: http://localhost:3001
-- Swagger docs: http://localhost:3001/api/docs
+**Expected output**:
+```
+NAME                  STATUS    PORTS
+analytics_db          Up        0.0.0.0:5432->5432/tcp
+analytics_backend     Up        0.0.0.0:3001->3001/tcp
+analytics_frontend    Up        0.0.0.0:3000->80/tcp
+```
+
+### Step 3: Access Dashboard
+
+- **Frontend**: http://localhost:3000
+- **API Health**: http://localhost:3001/api/health
+- **Swagger UI**: http://localhost:3001/api/docs
+
+### Production Notes
+
+1. **HTTPS**: Configure reverse proxy (Nginx/Caddy) for SSL/TLS
+2. **Firewall**: Only expose ports 80/443 externally
+3. **Backups**: Regularly backup `pgdata` volume
+4. **Updates**: Use `docker-compose -f docker-compose.prod.yml up -d --build` to rebuild
+5. **Logs**: Monitor with `docker-compose -f docker-compose.prod.yml logs -f`
+
+## Development
+
+The default development setup runs:
+- **Database**: PostgreSQL in Docker container
+- **API**: NestJS on local machine (with hot reload)
+- **UI**: React on local machine (with HMR via Vite)
+
+This provides the fastest development experience with instant hot reloading.
+
+### Stop/Restart Services
+
+```bash
+# Stop database container
+docker-compose stop
+
+# Start database container
+docker-compose start
+
+# Stop and remove database (data preserved in volume)
+docker-compose down
+
+# DESTRUCTIVE: Remove database and all data
+docker-compose down -v
+```
 
 ### Project Structure
 
 ```
-dashboard/
-├── docker-compose.yml          # Container orchestration
+goodreads-explorer/
+├── docker-compose.yml          # Development: Database only
+├── docker-compose.prod.yml     # Production: Full containerization
 ├── .env.example                # Environment variables template
-├── README.md                   # This file
+├── DASHBOARD.md                # This file
 │
-├── backend/                    # NestJS API server
+├── dashboard-backend/          # NestJS API server
 │   ├── src/
 │   │   ├── main.ts            # App entry point (session, CORS, Swagger)
 │   │   ├── app.module.ts      # Root module
@@ -226,9 +274,10 @@ dashboard/
 │   │   └── migrations/        # Database migrations
 │   ├── package.json
 │   ├── tsconfig.json
-│   └── Dockerfile
+│   ├── .env.example
+│   └── Dockerfile             # Production build
 │
-├── frontend/                   # React SPA
+├── dashboard-ui/               # React SPA
 │   ├── src/
 │   │   ├── main.tsx           # React entry point
 │   │   ├── App.tsx            # Root component
@@ -253,7 +302,7 @@ dashboard/
 │   ├── vite.config.ts
 │   ├── tsconfig.json
 │   ├── nginx.conf             # Production server config
-│   └── Dockerfile
+│   └── Dockerfile             # Production build
 │
 └── database/
     ├── init.sql               # Optional initialization
@@ -585,7 +634,12 @@ FRONTEND_URL=http://localhost:3000            # Used for CORS
 REACT_APP_API_URL=http://localhost:3001/api  # Frontend -> Backend API URL
 ```
 
+**Development vs Production**:
+- Development: Database runs in Docker, POSTGRES_HOST=localhost
+- Production: All services in Docker, POSTGRES_HOST=db
+
 **Security Notes**:
+- ⚠️ Development uses default password `dev_password` (fine for local)
 - ⚠️ **Change `POSTGRES_PASSWORD`** in production (use strong password)
 - ⚠️ **Change `SESSION_SECRET`** in production (use random 32+ char string)
 - Set `NODE_ENV=production` for production deployments
@@ -593,21 +647,27 @@ REACT_APP_API_URL=http://localhost:3001/api  # Frontend -> Backend API URL
 
 ### Docker Compose Services
 
+**Development** (`docker-compose.yml`):
 | Service | Base Image | Port Mapping | Purpose | Volume |
 |---------|-----------|--------------|---------|--------|
-| `db` | postgres:15-alpine | 5432 (internal) | PostgreSQL database | `pgdata:/var/lib/postgresql/data` |
-| `backend` | node:20-alpine | 3001:3001 | NestJS API server | `./backend:/app` (dev only) |
-| `frontend` | nginx:alpine | 3000:80 | React SPA (Nginx) | Built files in image |
+| `db` | postgres:15-alpine | 5432:5432 | PostgreSQL database | `pgdata:/var/lib/postgresql/data` |
+
+**Production** (`docker-compose.prod.yml`):
+| Service | Base Image | Port Mapping | Purpose | Volume |
+|---------|-----------|--------------|---------|--------|
+| `db` | postgres:15-alpine | 5432:5432 | PostgreSQL database | `pgdata:/var/lib/postgresql/data` |
+| `backend` | node:20-alpine | 3001:3001 | NestJS API server | None (built into image) |
+| `frontend` | nginx:alpine | 3000:80 | React SPA (Nginx) | None (built into image) |
 
 **Container Names**:
 - `analytics_db` - Database container
-- `analytics_backend` - Backend API container
-- `analytics_frontend` - Frontend web server container
+- `analytics_backend` - Backend API container (production only)
+- `analytics_frontend` - Frontend web server container (production only)
 
 **Health Checks**:
 - Database: `pg_isready` command (10s interval)
-- Backend: Depends on DB health check
-- Frontend: Depends on backend startup
+- Backend: Depends on DB health check (production only)
+- Frontend: Depends on backend startup (production only)
 
 ## Technology Stack
 

@@ -47,10 +47,24 @@ goodreads-explorer/
 
 **Documentation**: [Dashboard README](./DASHBOARD.md) | [Full Spec](./specs/002-analytics-dashboard/spec.md)
 
-**Quick Start**:
+**Quick Start (Development)**:
+```bash
+# Start PostgreSQL only
+docker-compose up -d
+
+# Start backend (separate terminal)
+cd dashboard-backend && npm run start:dev
+
+# Start frontend (separate terminal)
+cd dashboard-ui && npm run dev
+
+# Open http://localhost:5173
+```
+
+**Production Deployment**:
 ```bash
 cp .env.example .env
-docker-compose up -d
+docker-compose -f docker-compose.prod.yml up -d
 # Open http://localhost:3000
 ```
 
@@ -65,7 +79,8 @@ docker-compose up -d
 - **Frontend**: React 18 + TypeScript + Vite
 - **Backend**: Node.js 20 + NestJS 10 + TypeORM
 - **Database**: PostgreSQL 15+
-- **Deployment**: Docker Compose (3 containers)
+- **Development**: Database in Docker, API/UI run locally
+- **Production**: Docker Compose (3 containers)
 
 ## Getting Started
 
@@ -86,16 +101,32 @@ goodreads-explorer scrape --user-id YOUR_GOODREADS_USER_ID
 
 ### Option 2: Run Analytics Dashboard
 
+**Development Mode** (with hot reload):
 ```bash
-# Start dashboard (requires Docker)
-cp .env.example .env
+# 1. Start PostgreSQL
 docker-compose up -d
 
-# Open dashboard
-open http://localhost:3000
+# 2. Start backend (separate terminal)
+cd dashboard-backend
+npm install
+npm run start:dev
 
-# Upload JSON files from scraper
-# View analytics automatically
+# 3. Start frontend (separate terminal)
+cd dashboard-ui
+npm install
+npm run dev
+
+# 4. Open dashboard
+open http://localhost:5173
+
+# 5. Upload JSON files and view analytics
+```
+
+**Production Mode** (fully containerized):
+```bash
+cp .env.example .env
+docker-compose -f docker-compose.prod.yml up -d
+open http://localhost:3000
 ```
 
 **Documentation**: [Dashboard README](./DASHBOARD.md) | [Dashboard Quickstart](./specs/002-analytics-dashboard/quickstart.md)
@@ -103,8 +134,11 @@ open http://localhost:3000
 ### Full Workflow
 
 1. **Scrape**: `goodreads-explorer scrape --user-id USER_ID` → Exports JSON files
-2. **Upload**: Open http://localhost:3000 → Click "Upload Library" → Select JSON files
-3. **Analyze**: View summary statistics, ratings, reading pace automatically
+2. **Start Dashboard**:
+   - Dev: `docker-compose up -d` + start backend/frontend locally
+   - Prod: `docker-compose -f docker-compose.prod.yml up -d`
+3. **Upload**: Open dashboard → Click "Upload Library" → Select JSON files
+4. **Analyze**: View summary statistics, ratings, reading pace automatically
 
 ## Requirements
 
@@ -114,11 +148,18 @@ open http://localhost:3000
 - Install with: `python3 -m pip install -e parser/`
 
 ### For Dashboard
-- **Docker Desktop** (includes Docker Compose)
+**Required**:
+- **Docker Desktop** (for PostgreSQL database)
   - macOS: `brew install --cask docker`
   - Linux: https://docs.docker.com/engine/install/
   - Windows: https://www.docker.com/products/docker-desktop
-- **OR** for local development: Node.js 20+, PostgreSQL 15+
+
+**Development** (runs API/UI locally):
+- Node.js 20+ LTS
+- npm or yarn
+
+**Production** (fully containerized):
+- Docker Desktop only (no Node.js needed)
 
 ## Component Documentation
 
@@ -179,7 +220,8 @@ Feature specifications and implementation plans are in the `specs/` directory.
 - Upload & parse 2000 books: **2.3s**
 - Analytics API response: **180ms**
 - Initial page load: **1.2s**
-- Resource usage: **~270MB RAM** (3 Docker containers)
+- Resource usage (dev): **~100MB RAM** (1 Docker container - PostgreSQL only)
+- Resource usage (prod): **~270MB RAM** (3 Docker containers)
 
 ## Architecture
 
