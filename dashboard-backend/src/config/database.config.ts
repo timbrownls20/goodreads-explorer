@@ -1,21 +1,32 @@
-import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { SequelizeModuleOptions } from '@nestjs/sequelize';
+import { User } from '../models/user.model';
+import { Library } from '../models/library.model';
+import { Book } from '../models/book.model';
 
-export const databaseConfig = (): TypeOrmModuleOptions => ({
-  type: 'postgres',
+export const databaseConfig = (): SequelizeModuleOptions => ({
+  dialect: 'postgres',
   host: process.env.POSTGRES_HOST || 'localhost',
   port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
   username: process.env.POSTGRES_USER || 'analytics_user',
   password: process.env.POSTGRES_PASSWORD || '',
   database: process.env.POSTGRES_DB || 'analytics',
-  entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-  migrations: [__dirname + '/../migrations/**/*{.ts,.js}'],
-  synchronize: process.env.NODE_ENV === 'development', // Auto-sync in dev (use migrations in prod)
-  logging: process.env.NODE_ENV === 'development' ? ['error', 'warn', 'query'] : ['error'],
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  poolSize: 10,
-  extra: {
-    max: 20, // Maximum pool size
-    idleTimeoutMillis: 30000, // Close idle connections after 30s
-    connectionTimeoutMillis: 2000, // Fail after 2s if can't connect
+  models: [User, Library, Book],
+  autoLoadModels: true,
+  synchronize: process.env.NODE_ENV === 'development', // Auto-sync in dev only
+  logging: process.env.NODE_ENV === 'development' ? console.log : false,
+  pool: {
+    max: 20,
+    min: 5,
+    acquire: 30000,
+    idle: 10000,
   },
+  dialectOptions:
+    process.env.NODE_ENV === 'production'
+      ? {
+          ssl: {
+            require: true,
+            rejectUnauthorized: false,
+          },
+        }
+      : {},
 });

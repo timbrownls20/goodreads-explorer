@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Book } from '../entities/book.entity';
+import { InjectModel } from '@nestjs/sequelize';
+import { Op } from 'sequelize';
+import { Book } from '../models/book.model';
 import {
   AnalyticsSummaryDto,
   FilterRequestDto,
@@ -11,8 +11,8 @@ import { logger } from '../utils/logger';
 @Injectable()
 export class AnalyticsEngineService {
   constructor(
-    @InjectRepository(Book)
-    private bookRepository: Repository<Book>,
+    @InjectModel(Book)
+    private bookModel: typeof Book,
   ) {}
 
   /**
@@ -26,7 +26,7 @@ export class AnalyticsEngineService {
 
     // Get filtered books
     const filteredBooks = await this.getFilteredBooks(libraryId, filters);
-    const unfilteredBooks = await this.bookRepository.find({
+    const unfilteredBooks = await this.bookModel.findAll({
       where: { libraryId },
     });
 
@@ -89,53 +89,48 @@ export class AnalyticsEngineService {
     libraryId: string,
     filters?: FilterRequestDto,
   ): Promise<Book[]> {
-    const query = this.bookRepository
-      .createQueryBuilder('book')
-      .where('book.libraryId = :libraryId', { libraryId });
+    const where: any = { libraryId };
 
     if (filters) {
       if (filters.status) {
-        query.andWhere('book.status = :status', { status: filters.status });
+        where.status = filters.status;
       }
 
-      if (filters.ratingMin) {
-        query.andWhere('book.rating >= :ratingMin', {
-          ratingMin: filters.ratingMin,
-        });
+      if (filters.ratingMin !== undefined || filters.ratingMax !== undefined) {
+        where.rating = {};
+        if (filters.ratingMin !== undefined) {
+          where.rating[Op.gte] = filters.ratingMin;
+        }
+        if (filters.ratingMax !== undefined) {
+          where.rating[Op.lte] = filters.ratingMax;
+        }
       }
 
-      if (filters.ratingMax) {
-        query.andWhere('book.rating <= :ratingMax', {
-          ratingMax: filters.ratingMax,
-        });
+      if (filters.dateStart || filters.dateEnd) {
+        where.dateFinished = {};
+        if (filters.dateStart) {
+          where.dateFinished[Op.gte] = filters.dateStart;
+        }
+        if (filters.dateEnd) {
+          where.dateFinished[Op.lte] = filters.dateEnd;
+        }
       }
 
-      if (filters.dateStart) {
-        query.andWhere('book.dateFinished >= :dateStart', {
-          dateStart: filters.dateStart,
-        });
-      }
-
-      if (filters.dateEnd) {
-        query.andWhere('book.dateFinished <= :dateEnd', {
-          dateEnd: filters.dateEnd,
-        });
-      }
-
+      // PostgreSQL JSONB array contains - checks if any array element matches
       if (filters.genres && filters.genres.length > 0) {
-        query.andWhere('book.genres ?| ARRAY[:...genres]', {
-          genres: filters.genres,
-        });
+        where.genres = {
+          [Op.overlap]: filters.genres, // Sequelize operator for JSONB array overlap
+        };
       }
 
       if (filters.shelves && filters.shelves.length > 0) {
-        query.andWhere('book.shelves ?| ARRAY[:...shelves]', {
-          shelves: filters.shelves,
-        });
+        where.shelves = {
+          [Op.overlap]: filters.shelves,
+        };
       }
     }
 
-    return query.getMany();
+    return this.bookModel.findAll({ where });
   }
 
   /**

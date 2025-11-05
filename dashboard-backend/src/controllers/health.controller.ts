@@ -1,12 +1,12 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
+import { InjectConnection } from '@nestjs/sequelize';
+import { Sequelize } from 'sequelize-typescript';
 
 @ApiTags('health')
 @Controller('health')
 export class HealthController {
-  constructor(@InjectDataSource() private dataSource: DataSource) {}
+  constructor(@InjectConnection() private sequelize: Sequelize) {}
 
   @Get()
   @ApiOperation({ summary: 'Health check endpoint' })
@@ -26,7 +26,7 @@ export class HealthController {
 
     try {
       // Check database connection
-      await this.dataSource.query('SELECT 1');
+      await this.sequelize.query('SELECT 1');
       databaseStatus = 'connected';
     } catch (error) {
       databaseStatus = 'disconnected';

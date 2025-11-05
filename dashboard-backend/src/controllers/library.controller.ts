@@ -14,13 +14,12 @@ import {
   ApiBody,
   ApiResponse,
 } from '@nestjs/swagger';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/sequelize';
 import { FileParserService } from '../services/file-parser.service';
 import { UploadResponseDto } from '../dto/upload.dto';
-import { User } from '../entities/user.entity';
-import { Library } from '../entities/library.entity';
-import { Book } from '../entities/book.entity';
+import { User } from '../models/user.model';
+import { Library } from '../models/library.model';
+import { Book } from '../models/book.model';
 import { logger } from '../utils/logger';
 
 @ApiTags('library')
@@ -28,12 +27,12 @@ import { logger } from '../utils/logger';
 export class LibraryController {
   constructor(
     private readonly fileParserService: FileParserService,
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
-    @InjectRepository(Library)
-    private libraryRepository: Repository<Library>,
-    @InjectRepository(Book)
-    private bookRepository: Repository<Book>,
+    @InjectModel(User)
+    private userModel: typeof User,
+    @InjectModel(Library)
+    private libraryModel: typeof Library,
+    @InjectModel(Book)
+    private bookModel: typeof Book,
   ) {}
 
   @Post('upload')
@@ -120,7 +119,7 @@ export class LibraryController {
 
       try {
         // Check for duplicate (same title + author in library)
-        const existing = await this.bookRepository.findOne({
+        const existing = await this.bookModel.findOne({
           where: {
             libraryId: library.id,
             title: result.book!.title,
@@ -137,13 +136,12 @@ export class LibraryController {
           continue;
         }
 
-        // Create book entity
-        const book = this.bookRepository.create({
+        // Create book
+        await this.bookModel.create({
           ...result.book,
           libraryId: library.id,
         });
 
-        await this.bookRepository.save(book);
         stats.booksImported++;
       } catch (error) {
         logger.error('Failed to save book to database', {
@@ -160,7 +158,7 @@ export class LibraryController {
 
     // Update library metadata
     library.lastUploadedAt = new Date();
-    await this.libraryRepository.save(library);
+    await library.save();
 
     stats.durationMs = Date.now() - startTime;
 
@@ -187,11 +185,10 @@ export class LibraryController {
   ): Promise<User> {
     const sessionId = session.id;
 
-    let user = await this.userRepository.findOne({ where: { sessionId } });
+    let user = await this.userModel.findOne({ where: { sessionId } });
 
     if (!user) {
-      user = this.userRepository.create({ sessionId });
-      await this.userRepository.save(user);
+      user = await this.userModel.create({ sessionId });
       logger.info('Created new user', { userId: user.id, sessionId });
     }
 
@@ -202,16 +199,15 @@ export class LibraryController {
    * Get or create library for user
    */
   private async getOrCreateLibrary(user: User): Promise<Library> {
-    let library = await this.libraryRepository.findOne({
+    let library = await this.libraryModel.findOne({
       where: { userId: user.id, name: 'My Library' },
     });
 
     if (!library) {
-      library = this.libraryRepository.create({
+      library = await this.libraryModel.create({
         userId: user.id,
         name: 'My Library',
       });
-      await this.libraryRepository.save(library);
       logger.info('Created new library', { libraryId: library.id });
     }
 

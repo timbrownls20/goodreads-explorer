@@ -11,15 +11,14 @@ import {
   ApiResponse,
   ApiQuery,
 } from '@nestjs/swagger';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/sequelize';
 import { AnalyticsEngineService } from '../services/analytics-engine.service';
 import {
   AnalyticsSummaryDto,
   FilterRequestDto,
 } from '../dto/analytics.dto';
-import { User } from '../entities/user.entity';
-import { Library } from '../entities/library.entity';
+import { User } from '../models/user.model';
+import { Library } from '../models/library.model';
 import { logger } from '../utils/logger';
 
 @ApiTags('analytics')
@@ -27,10 +26,10 @@ import { logger } from '../utils/logger';
 export class AnalyticsController {
   constructor(
     private readonly analyticsEngineService: AnalyticsEngineService,
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
-    @InjectRepository(Library)
-    private libraryRepository: Repository<Library>,
+    @InjectModel(User)
+    private userModel: typeof User,
+    @InjectModel(Library)
+    private libraryModel: typeof Library,
   ) {}
 
   @Get('summary')
@@ -119,7 +118,7 @@ export class AnalyticsController {
    */
   private async getUserLibrary(sessionId: string): Promise<Library> {
     // Find user by session
-    const user = await this.userRepository.findOne({ where: { sessionId } });
+    const user = await this.userModel.findOne({ where: { sessionId } });
 
     if (!user) {
       throw new NotFoundException(
@@ -128,7 +127,7 @@ export class AnalyticsController {
     }
 
     // Find user's library
-    const library = await this.libraryRepository.findOne({
+    const library = await this.libraryModel.findOne({
       where: { userId: user.id, name: 'My Library' },
     });
 

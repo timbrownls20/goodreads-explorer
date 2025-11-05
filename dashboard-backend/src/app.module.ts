@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { SequelizeModule } from '@nestjs/sequelize';
 import { databaseConfig } from './config/database.config';
 import { HealthController } from './controllers/health.controller';
 import { LibraryController } from './controllers/library.controller';
 import { AnalyticsController } from './controllers/analytics.controller';
 import { FileParserService } from './services/file-parser.service';
 import { AnalyticsEngineService } from './services/analytics-engine.service';
-import { User } from './entities/user.entity';
-import { Library } from './entities/library.entity';
-import { Book } from './entities/book.entity';
+import { User } from './models/user.model';
+import { Library } from './models/library.model';
+import { Book } from './models/book.model';
 
 @Module({
   imports: [
@@ -19,13 +19,13 @@ import { Book } from './entities/book.entity';
       envFilePath: '.env',
     }),
 
-    // TypeORM module (PostgreSQL connection)
-    TypeOrmModule.forRootAsync({
+    // Sequelize module (PostgreSQL connection)
+    SequelizeModule.forRootAsync({
       useFactory: databaseConfig,
     }),
 
-    // Register entities for dependency injection
-    TypeOrmModule.forFeature([User, Library, Book]),
+    // Register models for dependency injection
+    SequelizeModule.forFeature([User, Library, Book]),
   ],
   controllers: [HealthController, LibraryController, AnalyticsController],
   providers: [FileParserService, AnalyticsEngineService],
