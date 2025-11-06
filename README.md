@@ -137,7 +137,7 @@ open http://localhost:3000
 2. **Start Dashboard**:
    - Dev: `docker-compose up -d` + start backend/frontend locally
    - Prod: `docker-compose -f docker-compose.prod.yml up -d`
-3. **Upload**: Open dashboard → Click "Upload Library" → Select JSON files
+3. **Upload**: Open dashboard → Click "Select Library Folder" → Choose folder with JSON files
 4. **Analyze**: View summary statistics, ratings, reading pace automatically
 
 ## Requirements

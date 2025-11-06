@@ -6,6 +6,14 @@ interface UploadManagerProps {
   onUploadSuccess?: () => void;
 }
 
+// Extend HTMLInputElement to support webkitdirectory
+declare module 'react' {
+  interface InputHTMLAttributes<T> extends HTMLAttributes<T> {
+    webkitdirectory?: string;
+    directory?: string;
+  }
+}
+
 export const UploadManager = ({ onUploadSuccess }: UploadManagerProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
@@ -57,18 +65,25 @@ export const UploadManager = ({ onUploadSuccess }: UploadManagerProps) => {
         type="file"
         accept=".json"
         multiple
+        webkitdirectory=""
+        directory=""
         onChange={handleFileSelect}
         style={{ display: 'none' }}
       />
 
       {!uploadResult && !isUploading && (
-        <button
-          onClick={handleButtonClick}
-          className="upload-button"
-          disabled={isUploading}
-        >
-          Upload Library
-        </button>
+        <div className="upload-section">
+          <button
+            onClick={handleButtonClick}
+            className="upload-button"
+            disabled={isUploading}
+          >
+            Select Library Folder
+          </button>
+          <p className="upload-hint">
+            Choose the folder containing your JSON library files
+          </p>
+        </div>
       )}
 
       {isUploading && (

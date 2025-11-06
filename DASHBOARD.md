@@ -120,7 +120,7 @@ Open browser: **http://localhost:5173**
 
 You should see:
 - Empty state with "No library data found" message
-- "Upload Library" button
+- "Select Library Folder" button
 
 **Verify Backend**:
 - API health check: http://localhost:3001/api/health
@@ -128,11 +128,11 @@ You should see:
 
 ### Step 5: Upload Library Data
 
-1. Click **"Upload Library"** button in the dashboard
-2. Browser file picker opens - select JSON files from your library export folder
-   - Example: Navigate to scraper output (e.g., `/Users/name/library-export/`)
-   - Select all `.json` files (Cmd/Ctrl+A or select multiple)
-   - Click "Open"
+1. Click **"Select Library Folder"** button in the dashboard
+2. Browser folder picker opens - select the folder containing your JSON files
+   - Example: Navigate to and select the scraper output folder (e.g., `/Users/name/library-export/`)
+   - All `.json` files in the folder will be automatically uploaded
+   - Click "Select" or "Upload" (depending on your browser)
 3. Wait for upload to complete (~2-3 seconds for 2000 books)
    - Progress bar shows upload status
    - Success message displays: "Successfully imported X books from Y files"
@@ -351,8 +351,8 @@ docker-compose up -d --build
 After reading more books:
 
 1. Run scraper again to export updated library
-2. In dashboard, click "Upload Library"
-3. Select updated export folder
+2. In dashboard, click "Select Library Folder"
+3. Choose the updated export folder
 4. Dashboard replaces old data with new data
 
 ## Troubleshooting
