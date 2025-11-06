@@ -25,9 +25,13 @@ async function bootstrap() {
     }),
   );
 
-  // Enable CORS for frontend origin
+  // Enable CORS for frontend origins
+  const allowedOrigins = process.env.NODE_ENV === 'production'
+    ? [process.env.FRONTEND_URL || 'http://localhost:3000']
+    : ['http://localhost:3000', 'http://localhost:5173']; // Allow both nginx and Vite dev server
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: allowedOrigins,
     credentials: true,
   });
 
