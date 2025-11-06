@@ -26,8 +26,19 @@ export class FileParserService {
       // Parse JSON
       const rawData = JSON.parse(fileBuffer.toString('utf-8'));
 
+      // Transform scraper format to backend DTO format
+      const transformedData = this.transformScraperFormat(rawData);
+
+      if (!transformedData) {
+        logger.warn('Unable to extract book data from file', { filename });
+        return {
+          success: false,
+          errors: ['Invalid file format: no book data found'],
+        };
+      }
+
       // Transform to DTO instance
-      const bookDto = plainToInstance(CreateBookDto, rawData);
+      const bookDto = plainToInstance(CreateBookDto, transformedData);
 
       // Validate DTO
       const validationErrors = await validate(bookDto);
@@ -70,6 +81,69 @@ export class FileParserService {
         errors: [`Invalid JSON format: ${errorMessage}`],
       };
     }
+  }
+
+  /**
+   * Transform scraper JSON format to backend DTO format
+   * Handles both individual book files and user_books array format
+   */
+  private transformScraperFormat(rawData: any): any | null {
+    // Check if this is a user_books format from scraper
+    if (rawData.user_books && Array.isArray(rawData.user_books) && rawData.user_books.length > 0) {
+      // Take the first book from the user_books array
+      const userBook = rawData.user_books[0];
+      return this.mapUserBookToDto(userBook);
+    }
+
+    // Check if this is a single user_book object
+    if (rawData.book && rawData.reading_status) {
+      return this.mapUserBookToDto(rawData);
+    }
+
+    // Check if this is already in the correct format
+    if (rawData.title && rawData.author) {
+      return rawData;
+    }
+
+    return null;
+  }
+
+  /**
+   * Map scraper's user_book format to backend DTO format
+   */
+  private mapUserBookToDto(userBook: any): any {
+    const book = userBook.book || {};
+
+    // Extract shelf names from shelves array
+    const shelfNames = (userBook.shelves || [])
+      .map((shelf: any) => shelf.name)
+      .filter((name: string) => name && typeof name === 'string');
+
+    // Parse publication year from publication_date
+    let publicationYear: number | null = null;
+    if (book.publication_date) {
+      const yearMatch = book.publication_date.match(/\d{4}/);
+      if (yearMatch) {
+        publicationYear = parseInt(yearMatch[0], 10);
+      }
+    }
+
+    return {
+      title: book.title,
+      author: book.author,
+      status: userBook.reading_status, // 'read', 'currently-reading', 'to-read'
+      rating: userBook.user_rating,
+      isbn: book.isbn || book.isbn13 || null,
+      publicationYear,
+      pages: book.page_count || null,
+      genres: book.genres || [],
+      shelves: shelfNames,
+      dateAdded: userBook.date_added || null,
+      dateStarted: userBook.date_started || null,
+      dateFinished: userBook.date_finished || null,
+      review: userBook.review || null,
+      reviewDate: userBook.review_date || null,
+    };
   }
 
   /**
