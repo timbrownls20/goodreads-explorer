@@ -11,19 +11,17 @@ import {
 import './Dashboard.css';
 
 export const Dashboard = () => {
-  const [hasLibrary, setHasLibrary] = useState(false);
   const { summary, isLoading, error, refetch } = useAnalytics(
     undefined,
-    hasLibrary,
+    true, // Always try to fetch on mount
   );
 
   const handleUploadSuccess = () => {
-    setHasLibrary(true);
     refetch();
   };
 
   // Empty state - no library uploaded yet
-  if (!hasLibrary && !summary) {
+  if (!isLoading && !summary && error) {
     return (
       <div className="dashboard">
         <header className="dashboard-header">
