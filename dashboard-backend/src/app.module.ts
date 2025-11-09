@@ -12,6 +12,8 @@ import { Library } from './models/library.model';
 import { Book } from './models/book.model';
 import { Genre } from './models/genre.model';
 import { BookGenre } from './models/book-genre.model';
+import { Shelf } from './models/shelf.model';
+import { BookShelf } from './models/book-shelf.model';
 
 @Module({
   imports: [
@@ -27,8 +29,8 @@ import { BookGenre } from './models/book-genre.model';
     }),
 
     // Register models for dependency injection
-    // Note: BookGenre must come before Book and Genre since they reference it
-    SequelizeModule.forFeature([Library, BookGenre, Book, Genre]),
+    // Note: Junction tables (BookGenre, BookShelf) must come before Book, Genre, and Shelf
+    SequelizeModule.forFeature([Library, BookGenre, BookShelf, Book, Genre, Shelf]),
   ],
   controllers: [HealthController, LibraryController, AnalyticsController],
   providers: [FileParserService, AnalyticsEngineService, LibraryImportService],

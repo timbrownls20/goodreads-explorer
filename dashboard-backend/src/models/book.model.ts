@@ -14,6 +14,8 @@ import {
 import { Library } from './library.model';
 import { Genre } from './genre.model';
 import { BookGenre } from './book-genre.model';
+import { Shelf } from './shelf.model';
+import { BookShelf } from './book-shelf.model';
 
 @Table({
   tableName: 'books',
@@ -91,10 +93,9 @@ export class Book extends Model {
   @BelongsToMany(() => Genre, () => BookGenre)
   genres: Genre[];
 
-  // Shelves: JSONB for user-defined shelves
-  @Default([])
-  @Column({ type: DataType.JSONB, allowNull: false })
-  shelves: string[];
+  // Shelves: many-to-many relationship (normalized)
+  @BelongsToMany(() => Shelf, () => BookShelf)
+  shelves: Shelf[];
 
   // Dates
   @Column({ type: DataType.DATEONLY, allowNull: true })

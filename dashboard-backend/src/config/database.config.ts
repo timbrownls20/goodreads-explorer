@@ -3,6 +3,8 @@ import { Library } from '../models/library.model';
 import { Book } from '../models/book.model';
 import { Genre } from '../models/genre.model';
 import { BookGenre } from '../models/book-genre.model';
+import { Shelf } from '../models/shelf.model';
+import { BookShelf } from '../models/book-shelf.model';
 
 export const databaseConfig = (): SequelizeModuleOptions => ({
   dialect: 'postgres',
@@ -11,8 +13,8 @@ export const databaseConfig = (): SequelizeModuleOptions => ({
   username: process.env.POSTGRES_USER || 'analytics_user',
   password: process.env.POSTGRES_PASSWORD || '',
   database: process.env.POSTGRES_DB || 'analytics',
-  // BookGenre must come before Book and Genre since they reference it in @BelongsToMany
-  models: [Library, BookGenre, Book, Genre],
+  // Junction tables (BookGenre, BookShelf) must come before Book, Genre, and Shelf
+  models: [Library, BookGenre, BookShelf, Book, Genre, Shelf],
   autoLoadModels: true,
   synchronize: process.env.NODE_ENV === 'development', // Auto-sync in dev only
   logging: process.env.NODE_ENV === 'development' ? console.log : false,

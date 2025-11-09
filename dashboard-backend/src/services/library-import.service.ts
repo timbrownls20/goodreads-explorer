@@ -5,6 +5,8 @@ import { Library } from '../models/library.model';
 import { Book } from '../models/book.model';
 import { Genre } from '../models/genre.model';
 import { BookGenre } from '../models/book-genre.model';
+import { Shelf } from '../models/shelf.model';
+import { BookShelf } from '../models/book-shelf.model';
 import { logger } from '../utils/logger';
 
 export interface ImportResult {
@@ -33,6 +35,10 @@ export class LibraryImportService {
     private genreModel: typeof Genre,
     @InjectModel(BookGenre)
     private bookGenreModel: typeof BookGenre,
+    @InjectModel(Shelf)
+    private shelfModel: typeof Shelf,
+    @InjectModel(BookShelf)
+    private bookShelfModel: typeof BookShelf,
   ) {}
 
   /**
@@ -92,15 +98,16 @@ export class LibraryImportService {
       try {
         // Use bulkCreate with updateOnDuplicate for efficient upserts
         // This handles both inserts and updates in a single operation
-        // Step 1: Extract and create genres
+        // Step 1: Extract and create genres and shelves
         const genreMap = await this.createGenresFromBooks(validBooks);
+        const shelfMap = await this.createShelvesFromBooks(validBooks);
 
-        // Step 2: Remove genres from book data before saving
-        // (genres are now handled via many-to-many relationship)
-        const booksWithoutGenres = validBooks.map(({ genres, ...book }) => book);
+        // Step 2: Remove genres and shelves from book data before saving
+        // (genres and shelves are now handled via many-to-many relationships)
+        const booksWithoutRelations = validBooks.map(({ genres, shelves, ...book }) => book);
 
         // Step 3: Save books (upsert based on libraryId + sourceFile)
-        const result = await this.bookModel.bulkCreate(booksWithoutGenres, {
+        const result = await this.bookModel.bulkCreate(booksWithoutRelations, {
           updateOnDuplicate: [
             'title',
             'author',
@@ -115,7 +122,6 @@ export class LibraryImportService {
             'literaryAwards',
             'coverImageUrl',
             'goodreadsUrl',
-            'shelves',
             'dateAdded',
             'dateStarted',
             'dateFinished',
@@ -126,8 +132,9 @@ export class LibraryImportService {
           conflictAttributes: ['libraryId', 'sourceFile'], // Use compound unique key for conflict detection
         });
 
-        // Step 4: Create book-genre relationships
+        // Step 4: Create book-genre and book-shelf relationships
         await this.linkBooksToGenres(validBooks, result, genreMap);
+        await this.linkBooksToShelves(validBooks, result, shelfMap);
 
         stats.booksImported = result.length;
 
@@ -287,7 +294,98 @@ export class LibraryImportService {
   }
 
   /**
-   * Create a normalized slug from a genre name
+   * Extract unique shelves from books and create Shelf records
+   * Returns a map of shelf name (original case) to shelf ID
+   */
+  private async createShelvesFromBooks(
+    books: any[],
+  ): Promise<Map<string, string>> {
+    // Extract all unique shelf names
+    const uniqueShelfNames = new Set<string>();
+    books.forEach((book) => {
+      if (book.shelves && Array.isArray(book.shelves)) {
+        book.shelves.forEach((shelf: string) => {
+          if (shelf && typeof shelf === 'string') {
+            uniqueShelfNames.add(shelf);
+          }
+        });
+      }
+    });
+
+    const shelfMap = new Map<string, string>();
+
+    if (uniqueShelfNames.size === 0) {
+      return shelfMap;
+    }
+
+    // Create shelf records (or find existing)
+    for (const shelfName of uniqueShelfNames) {
+      const slug = this.createSlug(shelfName);
+
+      // Try to find existing shelf by slug
+      let shelf = await this.shelfModel.findOne({ where: { slug } });
+
+      if (!shelf) {
+        // Create new shelf
+        shelf = await this.shelfModel.create({
+          name: shelfName,
+          slug,
+        });
+        logger.debug('Created new shelf', { name: shelfName, slug });
+      }
+
+      shelfMap.set(shelfName, shelf.id);
+    }
+
+    logger.info('Shelves processed', { count: shelfMap.size });
+
+    return shelfMap;
+  }
+
+  /**
+   * Create BookShelf junction records to link books to their shelves
+   */
+  private async linkBooksToShelves(
+    originalBooks: any[],
+    savedBooks: Book[],
+    shelfMap: Map<string, string>,
+  ): Promise<void> {
+    const bookShelfRecords: Array<{ bookId: string; shelfId: string }> = [];
+
+    // Create junction records
+    savedBooks.forEach((savedBook, index) => {
+      const originalBook = originalBooks[index];
+      if (originalBook.shelves && Array.isArray(originalBook.shelves)) {
+        originalBook.shelves.forEach((shelfName: string) => {
+          const shelfId = shelfMap.get(shelfName);
+          if (shelfId) {
+            bookShelfRecords.push({
+              bookId: savedBook.id,
+              shelfId,
+            });
+          }
+        });
+      }
+    });
+
+    if (bookShelfRecords.length > 0) {
+      // Delete existing relationships for these books (in case of updates)
+      const bookIds = savedBooks.map((book) => book.id);
+      await this.bookShelfModel.destroy({
+        where: { bookId: bookIds },
+      });
+
+      // Create new relationships
+      await this.bookShelfModel.bulkCreate(bookShelfRecords);
+
+      logger.info('Book-shelf relationships created', {
+        count: bookShelfRecords.length,
+      });
+    }
+  }
+
+  /**
+   * Create a normalized slug from a genre/shelf name
    */
   private createSlug(name: string): string {
     return name
