@@ -6,6 +6,8 @@ import { Genre } from '../models/genre.model';
 import { BookGenre } from '../models/book-genre.model';
 import { Shelf } from '../models/shelf.model';
 import { BookShelf } from '../models/book-shelf.model';
+import { LiteraryAward } from '../models/literary-award.model';
+import { BookLiteraryAward } from '../models/book-literary-award.model';
 import { Library } from '../models/library.model';
 
 async function bootstrap() {
@@ -21,9 +23,11 @@ async function bootstrap() {
     // Get model repositories
     const bookGenreModel = app.get<typeof BookGenre>('BookGenreRepository');
     const bookShelfModel = app.get<typeof BookShelf>('BookShelfRepository');
+    const bookLiteraryAwardModel = app.get<typeof BookLiteraryAward>('BookLiteraryAwardRepository');
     const bookModel = app.get<typeof Book>('BookRepository');
     const genreModel = app.get<typeof Genre>('GenreRepository');
     const shelfModel = app.get<typeof Shelf>('ShelfRepository');
+    const literaryAwardModel = app.get<typeof LiteraryAward>('LiteraryAwardRepository');
     const libraryModel = app.get<typeof Library>('LibraryRepository');
 
     // Delete in order to avoid foreign key constraint violations
@@ -34,6 +38,10 @@ async function bootstrap() {
     console.log('🗑️  Deleting book-shelf relationships...');
     const bookShelvesDeleted = await bookShelfModel.destroy({ where: {} });
     console.log(`   ✓ Deleted ${bookShelvesDeleted} book-shelf relationships`);
+
+    console.log('🗑️  Deleting book-literary-award relationships...');
+    const bookLiteraryAwardsDeleted = await bookLiteraryAwardModel.destroy({ where: {} });
+    console.log(`   ✓ Deleted ${bookLiteraryAwardsDeleted} book-literary-award relationships`);
 
     console.log('🗑️  Deleting books...');
     const booksDeleted = await bookModel.destroy({ where: {} });
@@ -46,6 +54,10 @@ async function bootstrap() {
     console.log('🗑️  Deleting shelves...');
     const shelvesDeleted = await shelfModel.destroy({ where: {} });
     console.log(`   ✓ Deleted ${shelvesDeleted} shelves`);
+
+    console.log('🗑️  Deleting literary awards...');
+    const literaryAwardsDeleted = await literaryAwardModel.destroy({ where: {} });
+    console.log(`   ✓ Deleted ${literaryAwardsDeleted} literary awards`);
 
     console.log('🗑️  Deleting libraries...');
     const librariesDeleted = await libraryModel.destroy({ where: {} });

@@ -7,6 +7,8 @@ import { Genre } from '../models/genre.model';
 import { BookGenre } from '../models/book-genre.model';
 import { Shelf } from '../models/shelf.model';
 import { BookShelf } from '../models/book-shelf.model';
+import { LiteraryAward } from '../models/literary-award.model';
+import { BookLiteraryAward } from '../models/book-literary-award.model';
 import { logger } from '../utils/logger';
 
 export interface ImportResult {
@@ -39,6 +41,10 @@ export class LibraryImportService {
     private shelfModel: typeof Shelf,
     @InjectModel(BookShelf)
     private bookShelfModel: typeof BookShelf,
+    @InjectModel(LiteraryAward)
+    private literaryAwardModel: typeof LiteraryAward,
+    @InjectModel(BookLiteraryAward)
+    private bookLiteraryAwardModel: typeof BookLiteraryAward,
   ) {}
 
   /**
@@ -98,13 +104,14 @@ export class LibraryImportService {
       try {
         // Use bulkCreate with updateOnDuplicate for efficient upserts
         // This handles both inserts and updates in a single operation
-        // Step 1: Extract and create genres and shelves
+        // Step 1: Extract and create genres, shelves, and literary awards
         const genreMap = await this.createGenresFromBooks(validBooks);
         const shelfMap = await this.createShelvesFromBooks(validBooks);
+        const literaryAwardMap = await this.createLiteraryAwardsFromBooks(validBooks);
 
-        // Step 2: Remove genres and shelves from book data before saving
-        // (genres and shelves are now handled via many-to-many relationships)
-        const booksWithoutRelations = validBooks.map(({ genres, shelves, ...book }) => book);
+        // Step 2: Remove genres, shelves, and literaryAwards from book data before saving
+        // (these are now handled via many-to-many relationships)
+        const booksWithoutRelations = validBooks.map(({ genres, shelves, literaryAwards, ...book }) => book);
 
         // Step 3: Save books (upsert based on libraryId + sourceFile)
         const result = await this.bookModel.bulkCreate(booksWithoutRelations, {
@@ -119,7 +126,6 @@ export class LibraryImportService {
             'pages',
             'publisher',
             'setting',
-            'literaryAwards',
             'coverImageUrl',
             'goodreadsUrl',
             'dateAdded',
@@ -132,9 +138,10 @@ export class LibraryImportService {
           conflictAttributes: ['libraryId', 'sourceFile'], // Use compound unique key for conflict detection
         });
 
-        // Step 4: Create book-genre and book-shelf relationships
+        // Step 4: Create book-genre, book-shelf, and book-literary-award relationships
         await this.linkBooksToGenres(validBooks, result, genreMap);
         await this.linkBooksToShelves(validBooks, result, shelfMap);
+        await this.linkBooksToLiteraryAwards(validBooks, result, literaryAwardMap);
 
         stats.booksImported = result.length;
 
@@ -385,7 +392,98 @@ export class LibraryImportService {
   }
 
   /**
-   * Create a normalized slug from a genre/shelf name
+   * Extract unique literary awards from books and create LiteraryAward records
+   * Returns a map of award name (original case) to award ID
+   */
+  private async createLiteraryAwardsFromBooks(
+    books: any[],
+  ): Promise<Map<string, string>> {
+    // Extract all unique literary award names
+    const uniqueAwardNames = new Set<string>();
+    books.forEach((book) => {
+      if (book.literaryAwards && Array.isArray(book.literaryAwards)) {
+        book.literaryAwards.forEach((award: string) => {
+          if (award && typeof award === 'string') {
+            uniqueAwardNames.add(award);
+          }
+        });
+      }
+    });
+
+    const awardMap = new Map<string, string>();
+
+    if (uniqueAwardNames.size === 0) {
+      return awardMap;
+    }
+
+    // Create literary award records (or find existing)
+    for (const awardName of uniqueAwardNames) {
+      const slug = this.createSlug(awardName);
+
+      // Try to find existing award by slug
+      let award = await this.literaryAwardModel.findOne({ where: { slug } });
+
+      if (!award) {
+        // Create new award
+        award = await this.literaryAwardModel.create({
+          name: awardName,
+          slug,
+        });
+        logger.debug('Created new literary award', { name: awardName, slug });
+      }
+
+      awardMap.set(awardName, award.id);
+    }
+
+    logger.info('Literary awards processed', { count: awardMap.size });
+
+    return awardMap;
+  }
+
+  /**
+   * Create BookLiteraryAward junction records to link books to their literary awards
+   */
+  private async linkBooksToLiteraryAwards(
+    originalBooks: any[],
+    savedBooks: Book[],
+    awardMap: Map<string, string>,
+  ): Promise<void> {
+    const bookAwardRecords: Array<{ bookId: string; literaryAwardId: string }> = [];
+
+    // Create junction records
+    savedBooks.forEach((savedBook, index) => {
+      const originalBook = originalBooks[index];
+      if (originalBook.literaryAwards && Array.isArray(originalBook.literaryAwards)) {
+        originalBook.literaryAwards.forEach((awardName: string) => {
+          const awardId = awardMap.get(awardName);
+          if (awardId) {
+            bookAwardRecords.push({
+              bookId: savedBook.id,
+              literaryAwardId: awardId,
+            });
+          }
+        });
+      }
+    });
+
+    if (bookAwardRecords.length > 0) {
+      // Delete existing relationships for these books (in case of updates)
+      const bookIds = savedBooks.map((book) => book.id);
+      await this.bookLiteraryAwardModel.destroy({
+        where: { bookId: bookIds },
+      });
+
+      // Create new relationships
+      await this.bookLiteraryAwardModel.bulkCreate(bookAwardRecords);
+
+      logger.info('Book-literary-award relationships created', {
+        count: bookAwardRecords.length,
+      });
+    }
+  }
+
+  /**
+   * Create a normalized slug from a genre/shelf/award name
    */
   private createSlug(name: string): string {
     return name

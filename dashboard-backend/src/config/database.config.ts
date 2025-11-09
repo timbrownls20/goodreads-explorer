@@ -5,6 +5,8 @@ import { Genre } from '../models/genre.model';
 import { BookGenre } from '../models/book-genre.model';
 import { Shelf } from '../models/shelf.model';
 import { BookShelf } from '../models/book-shelf.model';
+import { LiteraryAward } from '../models/literary-award.model';
+import { BookLiteraryAward } from '../models/book-literary-award.model';
 
 export const databaseConfig = (): SequelizeModuleOptions => ({
   dialect: 'postgres',
@@ -13,8 +15,17 @@ export const databaseConfig = (): SequelizeModuleOptions => ({
   username: process.env.POSTGRES_USER || 'analytics_user',
   password: process.env.POSTGRES_PASSWORD || '',
   database: process.env.POSTGRES_DB || 'analytics',
-  // Junction tables (BookGenre, BookShelf) must come before Book, Genre, and Shelf
-  models: [Library, BookGenre, BookShelf, Book, Genre, Shelf],
+  // Junction tables (BookGenre, BookShelf, BookLiteraryAward) must come before Book, Genre, Shelf, and LiteraryAward
+  models: [
+    Library,
+    BookGenre,
+    BookShelf,
+    BookLiteraryAward,
+    Book,
+    Genre,
+    Shelf,
+    LiteraryAward,
+  ],
   autoLoadModels: true,
   synchronize: process.env.NODE_ENV === 'development', // Auto-sync in dev only
   logging: process.env.NODE_ENV === 'development' ? console.log : false,

@@ -16,6 +16,8 @@ import { Genre } from './genre.model';
 import { BookGenre } from './book-genre.model';
 import { Shelf } from './shelf.model';
 import { BookShelf } from './book-shelf.model';
+import { LiteraryAward } from './literary-award.model';
+import { BookLiteraryAward } from './book-literary-award.model';
 
 @Table({
   tableName: 'books',
@@ -78,9 +80,9 @@ export class Book extends Model {
   @Column({ type: DataType.STRING(500), allowNull: true })
   setting: string | null;
 
-  @Default([])
-  @Column({ type: DataType.JSONB, allowNull: false })
-  literaryAwards: string[];
+  // Literary Awards: many-to-many relationship (normalized)
+  @BelongsToMany(() => LiteraryAward, () => BookLiteraryAward)
+  literaryAwards: LiteraryAward[];
 
   @Column({ type: DataType.STRING(500), allowNull: true })
   coverImageUrl: string | null;
