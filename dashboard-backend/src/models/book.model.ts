@@ -15,7 +15,17 @@ import { Library } from './library.model';
 import { Genre } from './genre.model';
 import { BookGenre } from './book-genre.model';
 
-@Table({ tableName: 'books', underscored: true })
+@Table({
+  tableName: 'books',
+  underscored: true,
+  indexes: [
+    {
+      unique: true,
+      fields: ['library_id', 'source_file'],
+      name: 'books_library_source_unique',
+    },
+  ],
+})
 export class Book extends Model {
   @PrimaryKey
   @Default(DataType.UUIDV4)

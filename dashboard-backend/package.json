@@ -20,7 +20,8 @@
     "migration:generate": "typeorm-ts-node-commonjs migration:generate",
     "migration:run": "typeorm-ts-node-commonjs migration:run",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert",
-    "cli:reload": "ts-node -r tsconfig-paths/register src/cli/reload-library.ts"
+    "cli:reload": "ts-node -r tsconfig-paths/register src/cli/reload-library.ts",
+    "db:clear": "ts-node -r tsconfig-paths/register src/cli/clear-database.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

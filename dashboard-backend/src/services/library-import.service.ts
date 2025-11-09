@@ -99,7 +99,7 @@ export class LibraryImportService {
         // (genres are now handled via many-to-many relationship)
         const booksWithoutGenres = validBooks.map(({ genres, ...book }) => book);
 
-        // Step 3: Save books
+        // Step 3: Save books (upsert based on libraryId + sourceFile)
         const result = await this.bookModel.bulkCreate(booksWithoutGenres, {
           updateOnDuplicate: [
             'title',
@@ -117,8 +117,7 @@ export class LibraryImportService {
             'reviewDate',
             'sourceFile',
           ],
-          // Sequelize doesn't return which records were inserted vs updated
-          // So we'll count all as imported for simplicity
+          conflictAttributes: ['libraryId', 'sourceFile'], // Use compound unique key for conflict detection
         });
 
         // Step 4: Create book-genre relationships
