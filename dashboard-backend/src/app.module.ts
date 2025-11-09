@@ -7,6 +7,7 @@ import { LibraryController } from './controllers/library.controller';
 import { AnalyticsController } from './controllers/analytics.controller';
 import { FileParserService } from './services/file-parser.service';
 import { AnalyticsEngineService } from './services/analytics-engine.service';
+import { LibraryImportService } from './services/library-import.service';
 import { User } from './models/user.model';
 import { Library } from './models/library.model';
 import { Book } from './models/book.model';
@@ -28,6 +29,6 @@ import { Book } from './models/book.model';
     SequelizeModule.forFeature([User, Library, Book]),
   ],
   controllers: [HealthController, LibraryController, AnalyticsController],
-  providers: [FileParserService, AnalyticsEngineService],
+  providers: [FileParserService, AnalyticsEngineService, LibraryImportService],
 })
 export class AppModule {}

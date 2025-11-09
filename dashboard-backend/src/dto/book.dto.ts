@@ -1,7 +1,7 @@
 import {
   IsString,
   IsNotEmpty,
-  IsEnum,
+  IsIn,
   IsInt,
   Min,
   Max,
@@ -28,7 +28,7 @@ export class CreateBookDto {
     enum: ['read', 'currently-reading', 'to-read'],
     example: 'read',
   })
-  @IsEnum(['read', 'currently-reading', 'to-read'])
+  @IsIn(['read', 'currently-reading', 'to-read'])
   status: 'read' | 'currently-reading' | 'to-read';
 
   // Optional core metadata

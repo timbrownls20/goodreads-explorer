@@ -128,10 +128,39 @@ export class FileParserService {
       }
     }
 
+    // Extract date_started and date_finished from read_records
+    // Take the most recent record (last in array) if multiple exist
+    let dateStarted: string | null = null;
+    let dateFinished: string | null = null;
+
+    if (userBook.read_records && Array.isArray(userBook.read_records) && userBook.read_records.length > 0) {
+      const mostRecentRecord = userBook.read_records[userBook.read_records.length - 1];
+      dateStarted = mostRecentRecord.date_started || null;
+      dateFinished = mostRecentRecord.date_finished || null;
+    }
+
+    // Normalize reading_status to match backend enum
+    // Goodreads has many status values, map them to our three-status model
+    let status = userBook.reading_status;
+
+    // Map Goodreads statuses to our enum: 'read', 'currently-reading', 'to-read'
+    const statusMap: Record<string, string> = {
+      'read': 'read',
+      'currently-reading': 'currently-reading',
+      'to-read': 'to-read',
+      'to-read-owned': 'to-read',
+      'to-read-next': 'to-read',
+      'did-not-finish': 'read', // Attempted reading, count as read
+      'paused': 'currently-reading', // Paused mid-read
+      'reference': 'to-read', // Reference books go to to-read
+    };
+
+    status = statusMap[status] || 'to-read'; // Default to 'to-read' if unknown
+
     return {
       title: book.title,
       author: book.author,
-      status: userBook.reading_status, // 'read', 'currently-reading', 'to-read'
+      status, // 'read', 'currently-reading', 'to-read'
       rating: userBook.user_rating,
       isbn: book.isbn || book.isbn13 || null,
       publicationYear,
@@ -139,8 +168,8 @@ export class FileParserService {
       genres: book.genres || [],
       shelves: shelfNames,
       dateAdded: userBook.date_added || null,
-      dateStarted: userBook.date_started || null,
-      dateFinished: userBook.date_finished || null,
+      dateStarted,
+      dateFinished,
       review: userBook.review || null,
       reviewDate: userBook.review_date || null,
     };
