@@ -67,12 +67,31 @@ export class Book extends Model {
   @Column({ type: DataType.INTEGER, allowNull: true })
   pages: number | null;
 
+  @Column({ type: DataType.STRING(200), allowNull: true })
+  publisher: string | null;
+
+  @Column({ type: DataType.DATEONLY, allowNull: true })
+  publicationDate: Date | null;
+
+  @Column({ type: DataType.STRING(500), allowNull: true })
+  setting: string | null;
+
+  @Default([])
+  @Column({ type: DataType.JSONB, allowNull: false })
+  literaryAwards: string[];
+
+  @Column({ type: DataType.STRING(500), allowNull: true })
+  coverImageUrl: string | null;
+
+  @Column({ type: DataType.STRING(500), allowNull: true })
+  goodreadsUrl: string | null;
+
   // Categories & Organization
   // Genres: many-to-many relationship (normalized)
   @BelongsToMany(() => Genre, () => BookGenre)
   genres: Genre[];
 
-  // Shelves: still JSONB for user-defined shelves
+  // Shelves: JSONB for user-defined shelves
   @Default([])
   @Column({ type: DataType.JSONB, allowNull: false })
   shelves: string[];

@@ -121,11 +121,25 @@ export class FileParserService {
 
     // Parse publication year from publication_date
     let publicationYear: number | null = null;
+    let publicationDate: string | null = null;
     if (book.publication_date) {
+      publicationDate = book.publication_date;
       const yearMatch = book.publication_date.match(/\d{4}/);
       if (yearMatch) {
         publicationYear = parseInt(yearMatch[0], 10);
       }
+    }
+
+    // Extract and format literary awards
+    const literaryAwards: string[] = [];
+    if (book.literary_awards && Array.isArray(book.literary_awards)) {
+      book.literary_awards.forEach((award: any) => {
+        if (award.name) {
+          // Format as "Award Name (Year)" or just "Award Name" if no year
+          const awardStr = award.year ? `${award.name} (${award.year})` : award.name;
+          literaryAwards.push(awardStr);
+        }
+      });
     }
 
     // Extract date_started and date_finished from read_records
@@ -164,7 +178,13 @@ export class FileParserService {
       rating: userBook.user_rating,
       isbn: book.isbn || book.isbn13 || null,
       publicationYear,
+      publicationDate,
       pages: book.page_count || null,
+      publisher: book.publisher || null,
+      setting: book.setting || null,
+      literaryAwards,
+      coverImageUrl: book.cover_image_url || null,
+      goodreadsUrl: book.goodreads_url || null,
       genres: book.genres || [],
       shelves: shelfNames,
       dateAdded: userBook.date_added || null,

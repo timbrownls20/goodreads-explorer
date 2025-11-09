@@ -71,6 +71,56 @@ export class CreateBookDto {
   @Min(1)
   pages?: number | null;
 
+  @ApiPropertyOptional({
+    description: 'Publisher',
+    example: 'Penguin Books',
+  })
+  @IsOptional()
+  @IsString()
+  publisher?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Publication date (full date from Goodreads)',
+    example: 'January 1, 1930',
+  })
+  @IsOptional()
+  @IsString()
+  publicationDate?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Book setting/location',
+    example: 'Mariabronn',
+  })
+  @IsOptional()
+  @IsString()
+  setting?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Literary awards',
+    type: [String],
+    example: ['Hugo Award (1963)', 'Nebula Award (1965)'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  literaryAwards?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Cover image URL',
+    example: 'https://images.gr-assets.com/books/1234567890/12345.jpg',
+  })
+  @IsOptional()
+  @IsString()
+  coverImageUrl?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Goodreads URL',
+    example: 'https://www.goodreads.com/book/show/12345',
+  })
+  @IsOptional()
+  @IsString()
+  goodreadsUrl?: string | null;
+
   // Categories
   @ApiPropertyOptional({
     description: 'Book genres',
