@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import { Book } from '../models/book.model';
+import { Genre } from '../models/genre.model';
 import {
   AnalyticsSummaryDto,
   FilterRequestDto,
@@ -90,6 +91,7 @@ export class AnalyticsEngineService {
     filters?: FilterRequestDto,
   ): Promise<Book[]> {
     const where: any = { libraryId };
+    const include: any[] = [];
 
     if (filters) {
       if (filters.status) {
@@ -116,11 +118,17 @@ export class AnalyticsEngineService {
         }
       }
 
-      // PostgreSQL JSONB array contains - checks if any array element matches
+      // Genre filtering using many-to-many relationship
       if (filters.genres && filters.genres.length > 0) {
-        where.genres = {
-          [Op.overlap]: filters.genres, // Sequelize operator for JSONB array overlap
-        };
+        include.push({
+          model: Genre,
+          where: {
+            name: {
+              [Op.in]: filters.genres,
+            },
+          },
+          required: true, // INNER JOIN - only books with matching genres
+        });
       }
 
       if (filters.shelves && filters.shelves.length > 0) {
@@ -130,7 +138,10 @@ export class AnalyticsEngineService {
       }
     }
 
-    return this.bookModel.findAll({ where });
+    return this.bookModel.findAll({
+      where,
+      include: include.length > 0 ? include : undefined,
+    });
   }
 
   /**

@@ -4,6 +4,8 @@ import { FileParserService } from './file-parser.service';
 import { User } from '../models/user.model';
 import { Library } from '../models/library.model';
 import { Book } from '../models/book.model';
+import { Genre } from '../models/genre.model';
+import { BookGenre } from '../models/book-genre.model';
 import { logger } from '../utils/logger';
 
 export interface ImportResult {
@@ -30,6 +32,10 @@ export class LibraryImportService {
     private libraryModel: typeof Library,
     @InjectModel(Book)
     private bookModel: typeof Book,
+    @InjectModel(Genre)
+    private genreModel: typeof Genre,
+    @InjectModel(BookGenre)
+    private bookGenreModel: typeof BookGenre,
   ) {}
 
   /**
@@ -92,7 +98,15 @@ export class LibraryImportService {
       try {
         // Use bulkCreate with updateOnDuplicate for efficient upserts
         // This handles both inserts and updates in a single operation
-        const result = await this.bookModel.bulkCreate(validBooks, {
+        // Step 1: Extract and create genres
+        const genreMap = await this.createGenresFromBooks(validBooks);
+
+        // Step 2: Remove genres from book data before saving
+        // (genres are now handled via many-to-many relationship)
+        const booksWithoutGenres = validBooks.map(({ genres, ...book }) => book);
+
+        // Step 3: Save books
+        const result = await this.bookModel.bulkCreate(booksWithoutGenres, {
           updateOnDuplicate: [
             'title',
             'author',
@@ -101,7 +115,6 @@ export class LibraryImportService {
             'isbn',
             'publicationYear',
             'pages',
-            'genres',
             'shelves',
             'dateAdded',
             'dateStarted',
@@ -113,6 +126,9 @@ export class LibraryImportService {
           // Sequelize doesn't return which records were inserted vs updated
           // So we'll count all as imported for simplicity
         });
+
+        // Step 4: Create book-genre relationships
+        await this.linkBooksToGenres(validBooks, result, genreMap);
 
         stats.booksImported = result.length;
 
@@ -193,5 +209,108 @@ export class LibraryImportService {
     }
 
     return library;
+  }
+
+  /**
+   * Extract unique genres from books and create Genre records
+   * Returns a map of genre name (original case) to genre ID
+   */
+  private async createGenresFromBooks(
+    books: any[],
+  ): Promise<Map<string, string>> {
+    // Extract all unique genre names
+    const uniqueGenreNames = new Set<string>();
+    books.forEach((book) => {
+      if (book.genres && Array.isArray(book.genres)) {
+        book.genres.forEach((genre: string) => {
+          if (genre && typeof genre === 'string') {
+            uniqueGenreNames.add(genre);
+          }
+        });
+      }
+    });
+
+    const genreMap = new Map<string, string>();
+
+    if (uniqueGenreNames.size === 0) {
+      return genreMap;
+    }
+
+    // Create genre records (or find existing)
+    for (const genreName of uniqueGenreNames) {
+      const slug = this.createSlug(genreName);
+
+      // Try to find existing genre by slug
+      let genre = await this.genreModel.findOne({ where: { slug } });
+
+      if (!genre) {
+        // Create new genre
+        genre = await this.genreModel.create({
+          name: genreName,
+          slug,
+        });
+        logger.debug('Created new genre', { name: genreName, slug });
+      }
+
+      genreMap.set(genreName, genre.id);
+    }
+
+    logger.info('Genres processed', { count: genreMap.size });
+
+    return genreMap;
+  }
+
+  /**
+   * Create BookGenre junction records to link books to their genres
+   */
+  private async linkBooksToGenres(
+    originalBooks: any[],
+    savedBooks: Book[],
+    genreMap: Map<string, string>,
+  ): Promise<void> {
+    const bookGenreRecords: Array<{ bookId: string; genreId: string }> = [];
+
+    // Create junction records
+    savedBooks.forEach((savedBook, index) => {
+      const originalBook = originalBooks[index];
+      if (originalBook.genres && Array.isArray(originalBook.genres)) {
+        originalBook.genres.forEach((genreName: string) => {
+          const genreId = genreMap.get(genreName);
+          if (genreId) {
+            bookGenreRecords.push({
+              bookId: savedBook.id,
+              genreId,
+            });
+          }
+        });
+      }
+    });
+
+    if (bookGenreRecords.length > 0) {
+      // Delete existing relationships for these books (in case of updates)
+      const bookIds = savedBooks.map((book) => book.id);
+      await this.bookGenreModel.destroy({
+        where: { bookId: bookIds },
+      });
+
+      // Create new relationships
+      await this.bookGenreModel.bulkCreate(bookGenreRecords);
+
+      logger.info('Book-genre relationships created', {
+        count: bookGenreRecords.length,
+      });
+    }
+  }
+
+  /**
+   * Create a normalized slug from a genre name
+   */
+  private createSlug(name: string): string {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-'); // Replace multiple hyphens with single hyphen
   }
 }

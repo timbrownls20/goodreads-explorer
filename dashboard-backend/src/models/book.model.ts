@@ -7,10 +7,13 @@ import {
   Default,
   ForeignKey,
   BelongsTo,
+  BelongsToMany,
   CreatedAt,
   UpdatedAt,
 } from 'sequelize-typescript';
 import { Library } from './library.model';
+import { Genre } from './genre.model';
+import { BookGenre } from './book-genre.model';
 
 @Table({ tableName: 'books', underscored: true })
 export class Book extends Model {
@@ -54,11 +57,12 @@ export class Book extends Model {
   @Column({ type: DataType.INTEGER, allowNull: true })
   pages: number | null;
 
-  // Categories & Organization (JSONB columns for arrays)
-  @Default([])
-  @Column({ type: DataType.JSONB, allowNull: false })
-  genres: string[];
+  // Categories & Organization
+  // Genres: many-to-many relationship (normalized)
+  @BelongsToMany(() => Genre, () => BookGenre)
+  genres: Genre[];
 
+  // Shelves: still JSONB for user-defined shelves
   @Default([])
   @Column({ type: DataType.JSONB, allowNull: false })
   shelves: string[];
