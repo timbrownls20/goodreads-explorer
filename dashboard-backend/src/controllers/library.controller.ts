@@ -3,7 +3,6 @@ import {
   Post,
   UploadedFiles,
   UseInterceptors,
-  Session,
   BadRequestException,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -55,7 +54,6 @@ export class LibraryController {
   @UseInterceptors(FilesInterceptor('files', 2000)) // Max 2000 files
   async uploadLibrary(
     @UploadedFiles() files: Express.Multer.File[],
-    @Session() session: Record<string, any>,
   ): Promise<UploadResponseDto> {
     // Validate request
     if (!files || files.length === 0) {
@@ -66,10 +64,22 @@ export class LibraryController {
       throw new BadRequestException('Maximum 2000 files allowed per upload');
     }
 
+    // Extract library name from metadata in first file
+    let libraryName = 'web-upload'; // Default fallback
+    try {
+      const firstFile = files[0];
+      const fileContent = JSON.parse(firstFile.buffer.toString('utf-8'));
+      if (fileContent._metadata?.username) {
+        libraryName = `${fileContent._metadata.username}_library`;
+      }
+    } catch (error) {
+      // If we can't extract metadata, use default
+    }
+
     // Use shared import service
     const result = await this.libraryImportService.importLibrary(
       files,
-      session.id,
+      libraryName,
     );
 
     return {

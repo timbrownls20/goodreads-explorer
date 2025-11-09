@@ -1,5 +1,4 @@
 import { SequelizeModuleOptions } from '@nestjs/sequelize';
-import { User } from '../models/user.model';
 import { Library } from '../models/library.model';
 import { Book } from '../models/book.model';
 import { Genre } from '../models/genre.model';
@@ -13,7 +12,7 @@ export const databaseConfig = (): SequelizeModuleOptions => ({
   password: process.env.POSTGRES_PASSWORD || '',
   database: process.env.POSTGRES_DB || 'analytics',
   // BookGenre must come before Book and Genre since they reference it in @BelongsToMany
-  models: [User, Library, BookGenre, Book, Genre],
+  models: [Library, BookGenre, Book, Genre],
   autoLoadModels: true,
   synchronize: process.env.NODE_ENV === 'development', // Auto-sync in dev only
   logging: process.env.NODE_ENV === 'development' ? console.log : false,

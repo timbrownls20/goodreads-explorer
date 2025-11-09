@@ -2,8 +2,8 @@ import {
   Controller,
   Get,
   Query,
-  Session,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,7 +17,6 @@ import {
   AnalyticsSummaryDto,
   FilterRequestDto,
 } from '../dto/analytics.dto';
-import { User } from '../models/user.model';
 import { Library } from '../models/library.model';
 import { logger } from '../utils/logger';
 
@@ -26,8 +25,6 @@ import { logger } from '../utils/logger';
 export class AnalyticsController {
   constructor(
     private readonly analyticsEngineService: AnalyticsEngineService,
-    @InjectModel(User)
-    private userModel: typeof User,
     @InjectModel(Library)
     private libraryModel: typeof Library,
   ) {}
@@ -37,6 +34,12 @@ export class AnalyticsController {
     summary: 'Get summary statistics for library',
     description:
       'Returns aggregate statistics including total counts, ratings, reading pace, and year-over-year comparison. Supports optional filters.',
+  })
+  @ApiQuery({
+    name: 'libraryName',
+    required: true,
+    type: String,
+    description: 'Library name (e.g., "tim-brown_library")',
   })
   @ApiQuery({
     name: 'dateStart',
@@ -86,20 +89,27 @@ export class AnalyticsController {
     type: AnalyticsSummaryDto,
   })
   @ApiResponse({
+    status: 400,
+    description: 'Library name is required',
+  })
+  @ApiResponse({
     status: 404,
-    description: 'Library not found for session',
+    description: 'Library not found',
   })
   async getSummary(
+    @Query('libraryName') libraryName: string,
     @Query() filters: FilterRequestDto,
-    @Session() session: Record<string, any>,
   ): Promise<AnalyticsSummaryDto> {
     const startTime = Date.now();
-    const sessionId = session.id;
 
-    logger.info('Summary request received', { sessionId, filters });
+    if (!libraryName) {
+      throw new BadRequestException('Library name is required');
+    }
 
-    // Get user's library
-    const library = await this.getUserLibrary(sessionId);
+    logger.info('Summary request received', { libraryName, filters });
+
+    // Get library by name
+    const library = await this.getLibraryByName(libraryName);
 
     // Calculate summary statistics
     const summary = await this.analyticsEngineService.getSummary(
@@ -108,32 +118,22 @@ export class AnalyticsController {
     );
 
     const duration = Date.now() - startTime;
-    logger.info('Summary response sent', { sessionId, duration });
+    logger.info('Summary response sent', { libraryName, duration });
 
     return summary;
   }
 
   /**
-   * Get library for user's session
+   * Get library by name
    */
-  private async getUserLibrary(sessionId: string): Promise<Library> {
-    // Find user by session
-    const user = await this.userModel.findOne({ where: { sessionId } });
-
-    if (!user) {
-      throw new NotFoundException(
-        'No library found. Please upload your library data first.',
-      );
-    }
-
-    // Find user's library
+  private async getLibraryByName(name: string): Promise<Library> {
     const library = await this.libraryModel.findOne({
-      where: { userId: user.id, name: 'My Library' },
+      where: { name },
     });
 
     if (!library) {
       throw new NotFoundException(
-        'No library found. Please upload your library data first.',
+        `Library "${name}" not found. Please upload your library data first.`,
       );
     }
 

@@ -8,7 +8,7 @@ import * as path from 'path';
 
 interface CliOptions {
   folder: string;
-  sessionId?: string;
+  libraryName: string;
   clear?: boolean;
 }
 
@@ -23,23 +23,20 @@ Arguments:
   folder              Path to folder containing JSON library files
 
 Options:
-  --session-id <id>   Session ID to use (creates new user if not exists)
-  --clear             Clear existing library data before reload
-  --help, -h          Show this help message
+  --library-name <name>  Override library name (defaults to folder name)
+  --clear                Clear existing library data before reload
+  --help, -h             Show this help message
 
 Examples:
   npm run cli:reload -- /path/to/library/folder
-  npm run cli:reload -- /path/to/library/folder --session-id abc123
+  npm run cli:reload -- /path/to/tim-brown_library
+  npm run cli:reload -- /path/to/library/folder --library-name my-library
   npm run cli:reload -- /path/to/library/folder --clear
 `);
     process.exit(0);
   }
 
   const folder = args[0];
-  const sessionId = args.includes('--session-id')
-    ? args[args.indexOf('--session-id') + 1]
-    : `cli-${Date.now()}`;
-  const clear = args.includes('--clear');
 
   if (!folder) {
     console.error('❌ Error: Folder path is required');
@@ -56,7 +53,15 @@ Examples:
     process.exit(1);
   }
 
-  return { folder, sessionId, clear };
+  // Extract library name from folder path (e.g., "tim-brown_library" from "/path/to/tim-brown_library")
+  const defaultLibraryName = path.basename(folder);
+  const libraryName = args.includes('--library-name')
+    ? args[args.indexOf('--library-name') + 1]
+    : defaultLibraryName;
+
+  const clear = args.includes('--clear');
+
+  return { folder, libraryName, clear };
 }
 
 async function getJsonFiles(folderPath: string): Promise<string[]> {
@@ -71,7 +76,7 @@ async function bootstrap() {
 
   console.log('🚀 Starting library reload...');
   console.log(`📁 Folder: ${options.folder}`);
-  console.log(`🔑 Session ID: ${options.sessionId}`);
+  console.log(`📚 Library Name: ${options.libraryName}`);
   console.log(`🗑️  Clear existing: ${options.clear ? 'Yes' : 'No'}`);
   console.log('');
 
@@ -99,8 +104,7 @@ async function bootstrap() {
     // Clear existing library data if requested
     if (options.clear) {
       console.log('🗑️  Clearing existing library data...');
-      // Note: This will be handled by the import service creating a new user
-      // with a unique session ID, so old data remains in DB but is not accessible
+      // TODO: Implement library data clearing if needed
     }
 
     // Convert file paths to Multer.File objects
@@ -117,7 +121,7 @@ async function bootstrap() {
     // Use shared import service
     const result = await libraryImportService.importLibrary(
       files,
-      options.sessionId!,
+      options.libraryName,
       options.folder,
     );
 
@@ -144,10 +148,8 @@ async function bootstrap() {
     console.log('');
     console.log('✨ Library reload complete!');
     console.log(`📊 Total books in library: ${totalBooks}`);
-    console.log(`🔑 Session ID: ${options.sessionId}`);
+    console.log(`📚 Library Name: ${options.libraryName}`);
     console.log('');
-    console.log('💡 Use this session ID in your browser to view the library:');
-    console.log(`   Set cookie: connect.sid=${options.sessionId}`);
 
   } catch (error) {
     console.error('❌ Error reloading library:', error);

@@ -5,13 +5,10 @@ import {
   DataType,
   PrimaryKey,
   Default,
-  ForeignKey,
-  BelongsTo,
   HasMany,
   CreatedAt,
   UpdatedAt,
 } from 'sequelize-typescript';
-import { User } from './user.model';
 import { Book } from './book.model';
 
 @Table({ tableName: 'libraries', underscored: true })
@@ -21,17 +18,8 @@ export class Library extends Model {
   @Column(DataType.UUID)
   id: string;
 
-  // Foreign key relationship to user
-  @ForeignKey(() => User)
-  @Column({ type: DataType.UUID, allowNull: false })
-  userId: string;
-
-  @BelongsTo(() => User, { onDelete: 'CASCADE' })
-  user: User;
-
-  // Library metadata
-  @Default('My Library')
-  @Column({ type: DataType.STRING(100), allowNull: false })
+  // Library metadata - name is unique identifier (folder name)
+  @Column({ type: DataType.STRING(200), allowNull: false, unique: true })
   name: string;
 
   @Column({ type: DataType.STRING(500), allowNull: true })

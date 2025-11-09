@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { FileParserService } from './file-parser.service';
-import { User } from '../models/user.model';
 import { Library } from '../models/library.model';
 import { Book } from '../models/book.model';
 import { Genre } from '../models/genre.model';
@@ -26,8 +25,6 @@ export interface ImportResult {
 export class LibraryImportService {
   constructor(
     private readonly fileParserService: FileParserService,
-    @InjectModel(User)
-    private userModel: typeof User,
     @InjectModel(Library)
     private libraryModel: typeof Library,
     @InjectModel(Book)
@@ -44,21 +41,18 @@ export class LibraryImportService {
    */
   async importLibrary(
     files: Express.Multer.File[],
-    sessionId: string,
+    libraryName: string,
     folderPath?: string,
   ): Promise<ImportResult> {
     const startTime = Date.now();
 
     logger.info('Library import started', {
       fileCount: files.length,
-      sessionId,
+      libraryName,
     });
 
-    // Get or create user
-    const user = await this.getOrCreateUser(sessionId);
-
-    // Get or create library
-    const library = await this.getOrCreateLibrary(user, folderPath);
+    // Get or create library by name
+    const library = await this.getOrCreateLibrary(libraryName, folderPath);
 
     // Parse files
     const parseResults = await this.fileParserService.parseBookFiles(files);
@@ -172,40 +166,25 @@ export class LibraryImportService {
   }
 
   /**
-   * Get or create user from session ID
-   */
-  private async getOrCreateUser(sessionId: string): Promise<User> {
-    let user = await this.userModel.findOne({ where: { sessionId } });
-
-    if (!user) {
-      user = await this.userModel.create({
-        sessionId,
-        username: `User ${sessionId.substring(0, 8)}`,
-      });
-      logger.info('Created new user', { userId: user.id, sessionId });
-    }
-
-    return user;
-  }
-
-  /**
-   * Get or create library for user
+   * Get or create library by name
+   * If library with this name exists, it's an update; otherwise create new
    */
   private async getOrCreateLibrary(
-    user: User,
+    name: string,
     folderPath?: string,
   ): Promise<Library> {
     let library = await this.libraryModel.findOne({
-      where: { userId: user.id },
+      where: { name },
     });
 
     if (!library) {
       library = await this.libraryModel.create({
-        userId: user.id,
-        name: 'My Library',
+        name,
         folderPath,
       });
-      logger.info('Created new library', { libraryId: library.id });
+      logger.info('Created new library', { libraryId: library.id, name });
+    } else {
+      logger.info('Using existing library', { libraryId: library.id, name });
     }
 
     return library;
