@@ -2,10 +2,17 @@
 
 **Input**: Design documents from `/specs/002-analytics-dashboard/`
 **Prerequisites**: plan.md, spec.md, data-model.md, research.md, contracts/
+**Last Updated**: 2025-11-10
 
 **Tests**: Tests are NOT explicitly requested in the spec. Manual testing with sample datasets is specified instead.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
+
+**Implementation Notes**:
+- **ORM Change**: Using Sequelize instead of TypeORM as originally planned
+- **Data Structure**: Normalized tables for genres, shelves, literary awards (not JSONB arrays)
+- **Library Model**: Globally unique library names (no User-Library relationship in MVP)
+- **Directory Structure**: `dashboard-backend/` and `dashboard-ui/` (not dashboard/backend and dashboard/frontend)
 
 ## Format: `- [ ] [ID] [P?] [Story] Description`
 
@@ -16,10 +23,10 @@
 ## Path Conventions
 
 This is a full-stack web application with:
-- **Frontend**: `dashboard/frontend/src/`
-- **Backend**: `dashboard/backend/src/`
-- **Database**: `dashboard/database/`
-- **Docker**: `dashboard/` root level
+- **Frontend**: `dashboard-ui/src/`
+- **Backend**: `dashboard-backend/src/`
+- **Database**: `database/`
+- **Docker**: Root level (docker-compose.yml)
 
 ---
 
@@ -27,11 +34,11 @@ This is a full-stack web application with:
 
 **Purpose**: Project initialization and Docker Compose orchestration
 
-- [ ] T001 Create dashboard/ directory structure with frontend/, backend/, database/ subdirectories
-- [ ] T002 Create docker-compose.yml in dashboard/ root with PostgreSQL, backend, frontend services
-- [ ] T003 [P] Create .env.example in dashboard/ with database, backend, frontend configuration variables
-- [ ] T004 [P] Create dashboard/README.md with deployment instructions from quickstart.md
-- [ ] T005 [P] Create .dockerignore files in dashboard/frontend/ and dashboard/backend/
+- [x] T001 Create dashboard directories (dashboard-backend/, dashboard-ui/, database/)
+- [x] T002 Create docker-compose.yml in root with PostgreSQL, backend, frontend services
+- [x] T003 [P] Create .env.example in root with database, backend, frontend configuration variables
+- [x] T004 [P] Create README.md and DASHBOARD.md with deployment instructions
+- [x] T005 [P] Create .dockerignore files in dashboard-backend/ and dashboard-ui/
 
 ---
 
@@ -43,42 +50,42 @@ This is a full-stack web application with:
 
 ### Backend Foundation
 
-- [ ] T006 Initialize NestJS project in dashboard/backend/ with TypeScript, TypeORM, class-validator
-- [ ] T007 Create dashboard/backend/tsconfig.json with strict TypeScript settings
-- [ ] T008 Create dashboard/backend/nest-cli.json for NestJS CLI configuration
-- [ ] T009 Create dashboard/backend/src/main.ts as NestJS application entry point
-- [ ] T010 Create dashboard/backend/src/app.module.ts as root module with TypeORM, config imports
-- [ ] T011 Create dashboard/backend/src/config/database.config.ts for PostgreSQL connection settings
-- [ ] T012 [P] Create dashboard/backend/src/utils/logger.ts implementing Winston structured logging
-- [ ] T013 Create dashboard/backend/src/entities/user.entity.ts with User model (session_id, created_at)
-- [ ] T014 Create dashboard/backend/src/entities/library.entity.ts with Library model (user_id, name, folder_path)
-- [ ] T015 Create dashboard/backend/src/entities/book.entity.ts with Book model (all fields from data-model.md)
-- [ ] T016 Generate TypeORM migration for initial schema in dashboard/backend/src/migrations/
-- [ ] T017 Create dashboard/backend/src/controllers/health.controller.ts with GET /api/health endpoint
-- [ ] T018 Create dashboard/backend/Dockerfile with Node.js 20-alpine base, production build
-- [ ] T019 [P] Create dashboard/backend/.env.example with DATABASE_URL, PORT, NODE_ENV
+- [x] T006 Initialize NestJS project in dashboard-backend/ with TypeScript, **Sequelize** (not TypeORM), class-validator
+- [x] T007 Create dashboard-backend/tsconfig.json with strict TypeScript settings
+- [x] T008 Create dashboard-backend/nest-cli.json for NestJS CLI configuration
+- [x] T009 Create dashboard-backend/src/main.ts as NestJS application entry point
+- [x] T010 Create dashboard-backend/src/app.module.ts as root module with Sequelize, config imports
+- [x] T011 Create dashboard-backend/src/config/database.config.ts for PostgreSQL connection settings
+- [x] T012 [P] Create dashboard-backend/src/utils/logger.ts implementing Winston structured logging
+- [x] T013 Create dashboard-backend/src/models/user.model.ts with User model (session_id, created_at) - **not currently used**
+- [x] T014 Create dashboard-backend/src/models/library.model.ts with Library model (name unique, folder_path)
+- [x] T015 Create dashboard-backend/src/models/book.model.ts with Book model + normalized Genre, Shelf, LiteraryAward models
+- [x] T016 Database schema created via Sequelize sync (using sequelize.sync({ alter: true }))
+- [x] T017 Create dashboard-backend/src/controllers/health.controller.ts with GET /api/health endpoint
+- [x] T018 Create dashboard-backend/Dockerfile with Node.js 20-alpine base, production build
+- [x] T019 [P] Create .env.example with DATABASE_URL, PORT, NODE_ENV
 
 ### Frontend Foundation
 
-- [ ] T020 Initialize React + TypeScript + Vite project in dashboard/frontend/
-- [ ] T021 Create dashboard/frontend/tsconfig.json with strict TypeScript settings
-- [ ] T022 Create dashboard/frontend/vite.config.ts with proxy to backend API
-- [ ] T023 Create dashboard/frontend/src/main.tsx as React application entry point
-- [ ] T024 Create dashboard/frontend/src/App.tsx as root component with routing structure
-- [ ] T025 [P] Install react-chartjs-2, chart.js, axios dependencies in dashboard/frontend/package.json
-- [ ] T026 [P] Create dashboard/frontend/src/services/api.ts with Axios client configuration
-- [ ] T027 [P] Create dashboard/frontend/src/types/Book.ts interface matching backend Book entity
-- [ ] T028 [P] Create dashboard/frontend/src/types/Filter.ts interface for filter state
-- [ ] T029 [P] Create dashboard/frontend/src/types/Analytics.ts interface for API responses
-- [ ] T030 Create dashboard/frontend/Dockerfile with multi-stage build (Vite → Nginx)
-- [ ] T031 [P] Create dashboard/frontend/nginx.conf for serving React SPA
+- [x] T020 Initialize React + TypeScript + Vite project in dashboard-ui/
+- [x] T021 Create dashboard-ui/tsconfig.json with strict TypeScript settings
+- [x] T022 Create dashboard-ui/vite.config.ts with proxy to backend API
+- [x] T023 Create dashboard-ui/src/main.tsx as React application entry point
+- [x] T024 Create dashboard-ui/src/App.tsx as root component with routing structure
+- [x] T025 [P] Install react-chartjs-2, chart.js, axios dependencies in dashboard-ui/package.json
+- [x] T026 [P] Create dashboard-ui/src/services/api.ts with Axios client configuration
+- [x] T027 [P] Create dashboard-ui/src/types/Book.ts interface matching backend Book entity
+- [x] T028 [P] Create dashboard-ui/src/types/Filter.ts interface for filter state
+- [x] T029 [P] Create dashboard-ui/src/types/Analytics.ts interface for API responses
+- [x] T030 Create dashboard-ui/Dockerfile with multi-stage build (Vite → Nginx)
+- [x] T031 [P] Create dashboard-ui/nginx.conf for serving React SPA
 
 ### Database Foundation
 
-- [ ] T032 Create dashboard/database/init.sql with optional schema initialization
-- [ ] T033 [P] Create dashboard/database/seed_data/small-10.json with 10 sample books
-- [ ] T034 [P] Create dashboard/database/seed_data/medium-500.json with 500 sample books
-- [ ] T035 [P] Create dashboard/database/seed_data/large-2000.json with 2000 sample books
+- [x] T032 Create database/init.sql with optional schema initialization (UUID extension)
+- [ ] T033 [P] Create seed_data/small-10.json with 10 sample books (using actual library data instead)
+- [ ] T034 [P] Create seed_data/medium-500.json with 500 sample books (using actual library data instead)
+- [ ] T035 [P] Create seed_data/large-2000.json with 2000 sample books (using actual library data instead)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -92,32 +99,32 @@ This is a full-stack web application with:
 
 ### Backend for User Story 1
 
-- [ ] T036 [P] [US1] Create dashboard/backend/src/dto/book.dto.ts with CreateBookDto for upload validation
-- [ ] T037 [P] [US1] Create dashboard/backend/src/dto/upload.dto.ts with UploadResponseDto for upload results
-- [ ] T038 [P] [US1] Create dashboard/backend/src/dto/analytics.dto.ts with AnalyticsSummaryDto response schema
-- [ ] T039 [US1] Create dashboard/backend/src/services/file-parser.service.ts for JSON parsing and validation
-- [ ] T040 [US1] Create dashboard/backend/src/services/analytics-engine.service.ts for summary statistics calculation
-- [ ] T041 [US1] Create dashboard/backend/src/controllers/library.controller.ts with POST /api/library/upload endpoint using Multer
-- [ ] T042 [US1] Create dashboard/backend/src/controllers/analytics.controller.ts with GET /api/analytics/summary endpoint
+- [x] T036 [P] [US1] Create dashboard-backend/src/dto/book.dto.ts with CreateBookDto for upload validation
+- [x] T037 [P] [US1] Create dashboard-backend/src/dto/upload.dto.ts with UploadResponseDto for upload results
+- [x] T038 [P] [US1] Create dashboard-backend/src/dto/analytics.dto.ts with AnalyticsSummaryDto response schema
+- [x] T039 [US1] Create dashboard-backend/src/services/file-parser.service.ts for JSON parsing and validation
+- [x] T040 [US1] Create dashboard-backend/src/services/analytics-engine.service.ts for summary statistics calculation
+- [x] T041 [US1] Create dashboard-backend/src/controllers/library.controller.ts with POST /api/library/upload endpoint
+- [x] T042 [US1] Create dashboard-backend/src/controllers/analytics.controller.ts with GET /api/analytics/summary endpoint
 - [ ] T043 [US1] Add Swagger decorators to library.controller.ts and analytics.controller.ts for API documentation
-- [ ] T044 [US1] Implement upload processing workflow: parse JSON → validate DTOs → save to database in library.controller.ts
-- [ ] T045 [US1] Implement summary calculation: aggregate counts, averages, reading pace in analytics-engine.service.ts
-- [ ] T046 [US1] Add error handling for invalid JSON, missing fields, database failures in file-parser.service.ts
-- [ ] T047 [US1] Add structured logging for upload progress and analytics queries in analytics.controller.ts
+- [x] T044 [US1] Implement upload processing workflow via library-import.service.ts: parse → normalize → save with deduplication
+- [x] T045 [US1] Implement summary calculation: aggregate counts, averages, reading pace in analytics-engine.service.ts
+- [x] T046 [US1] Add error handling for invalid JSON, missing fields, database failures in file-parser.service.ts
+- [x] T047 [US1] Add structured logging for upload progress and analytics queries in analytics.controller.ts
 
 ### Frontend for User Story 1
 
-- [ ] T048 [P] [US1] Create dashboard/frontend/src/services/library.ts with uploadLibrary API function
-- [ ] T049 [P] [US1] Create dashboard/frontend/src/services/analytics.ts with getSummary API function
-- [ ] T050 [P] [US1] Create dashboard/frontend/src/hooks/useLibrary.ts for library upload state management
-- [ ] T051 [P] [US1] Create dashboard/frontend/src/hooks/useAnalytics.ts for analytics data fetching
-- [ ] T052 [US1] Create dashboard/frontend/src/components/UploadManager.tsx for file upload UI with progress indicator
-- [ ] T053 [P] [US1] Create dashboard/frontend/src/components/MetricCard.tsx for displaying individual statistics
-- [ ] T054 [US1] Create dashboard/frontend/src/components/Dashboard.tsx as main layout aggregating MetricCards
-- [ ] T055 [US1] Implement upload flow in UploadManager.tsx: file selection → upload → display results
-- [ ] T056 [US1] Implement summary display in Dashboard.tsx: fetch summary → render MetricCards with stats
-- [ ] T057 [US1] Add loading states and error handling in Dashboard.tsx for API failures
-- [ ] T058 [P] [US1] Create dashboard/frontend/src/utils/dateFormat.ts for date formatting utilities
+- [x] T048 [P] [US1] Create dashboard-ui/src/services/library.ts with uploadLibrary API function
+- [x] T049 [P] [US1] Create dashboard-ui/src/services/analytics.ts with getSummary API function
+- [x] T050 [P] [US1] Create dashboard-ui/src/hooks/useLibrary.ts for library upload state management
+- [x] T051 [P] [US1] Create dashboard-ui/src/hooks/useAnalytics.ts for analytics data fetching
+- [x] T052 [US1] Create dashboard-ui/src/components/UploadManager.tsx for file upload UI with progress indicator
+- [x] T053 [P] [US1] Create dashboard-ui/src/components/MetricCard.tsx for displaying individual statistics
+- [x] T054 [US1] Create dashboard-ui/src/components/Dashboard.tsx as main layout aggregating MetricCards
+- [x] T055 [US1] Implement upload flow in UploadManager.tsx: file selection → upload → display results
+- [x] T056 [US1] Implement summary display in Dashboard.tsx: fetch summary → render MetricCards with stats
+- [x] T057 [US1] Add loading states and error handling in Dashboard.tsx for API failures
+- [x] T058 [P] [US1] Create dashboard-ui/src/utils/dateFormat.ts for date formatting utilities
 
 **Checkpoint**: User Story 1 complete - Upload library and view summary statistics
 
@@ -423,18 +430,34 @@ With multiple developers:
 
 ## Task Count Summary
 
-- **Phase 1 (Setup)**: 5 tasks
-- **Phase 2 (Foundational)**: 30 tasks (Backend: 14, Frontend: 12, Database: 4)
-- **Phase 3 (User Story 1 - P1)**: 23 tasks (Backend: 12, Frontend: 11)
-- **Phase 4 (User Story 2 - P2)**: 17 tasks (Backend: 7, Frontend: 10)
-- **Phase 5 (User Story 3 - P2)**: 20 tasks (Backend: 9, Frontend: 11)
-- **Phase 6 (User Story 4 - P3)**: 23 tasks (Backend: 10, Frontend: 13)
-- **Phase 7 (Polish)**: 21 tasks
-- **Total**: 139 tasks
+- **Phase 1 (Setup)**: 5 tasks ✅ **COMPLETE**
+- **Phase 2 (Foundational)**: 30 tasks - **27 complete, 3 pending**
+  - Backend: 14 tasks ✅ **COMPLETE** (using Sequelize + normalized structure)
+  - Frontend: 12 tasks ✅ **COMPLETE**
+  - Database: 4 tasks - 1 complete, 3 pending (using real library data instead of seed files)
+- **Phase 3 (User Story 1 - P1)**: 23 tasks - **22 complete, 1 pending** (Swagger docs)
+  - Backend: 12 tasks - **11 complete, 1 pending**
+  - Frontend: 11 tasks ✅ **COMPLETE**
+- **Phase 4 (User Story 2 - P2)**: 17 tasks - **0 complete**
+- **Phase 5 (User Story 3 - P2)**: 20 tasks - **0 complete**
+- **Phase 6 (User Story 4 - P3)**: 23 tasks - **0 complete**
+- **Phase 7 (Polish)**: 21 tasks - **0 complete**
+- **Total**: 139 tasks - **54 complete (39%), 85 remaining**
+
+**Current Status** (2025-11-10):
+- ✅ Phase 1-2: Infrastructure complete with Sequelize + normalized DB
+- ✅ Phase 3: User Story 1 (MVP) mostly complete - basic analytics dashboard working
+- ⏳ Phase 4-7: Not started
+
+**Implementation Highlights**:
+- Backend uses Sequelize (not TypeORM) with normalized Genre/Shelf/LiteraryAward tables
+- Library import service handles deduplication and normalization
+- CLI tools: `npm run cli:reload` and `npm run db:clear` for development
+- Dashboard displays summary statistics from uploaded library data
 
 **MVP Scope** (Recommended first delivery):
-- Phase 1 (Setup): 5 tasks
-- Phase 2 (Foundational): 30 tasks
-- Phase 3 (User Story 1): 23 tasks
-- Minimal Polish: 5 tasks (T119, T123, T124, T125, T130)
-- **MVP Total**: 63 tasks
+- Phase 1 (Setup): 5 tasks ✅
+- Phase 2 (Foundational): 30 tasks ✅ (27/30 complete)
+- Phase 3 (User Story 1): 23 tasks ✅ (22/23 complete)
+- Minimal Polish: 5 tasks (T119, T123, T124, T125, T130) - **0 complete**
+- **MVP Total**: 54/63 tasks complete (86%)
