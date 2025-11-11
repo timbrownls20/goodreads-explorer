@@ -87,6 +87,7 @@ export class LibraryImportService {
       .map((r) => ({
         ...r.book!,
         libraryId: library.id,
+        originalJson: r.originalJson, // Store original JSON from source file
       }));
 
     // Track parse failures
@@ -134,6 +135,7 @@ export class LibraryImportService {
             'review',
             'reviewDate',
             'sourceFile',
+            'originalJson', // Update original JSON on re-import
           ],
           conflictAttributes: ['libraryId', 'sourceFile'], // Use compound unique key for conflict detection
         });

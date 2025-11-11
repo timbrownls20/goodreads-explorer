@@ -27,7 +27,7 @@ export const databaseConfig = (): SequelizeModuleOptions => ({
     LiteraryAward,
   ],
   autoLoadModels: true,
-  synchronize: process.env.NODE_ENV === 'development', // Auto-sync in dev only
+  synchronize: false, // DISABLED: Use migrations instead (pnpm migration:run)
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   pool: {
     max: 20,

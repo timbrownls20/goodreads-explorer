@@ -7,6 +7,7 @@ import { logger } from '../utils/logger';
 export interface ParseResult {
   success: boolean;
   book?: CreateBookDto;
+  originalJson?: any; // Raw JSON from source file
   errors?: string[];
 }
 
@@ -34,6 +35,7 @@ export class FileParserService {
         return {
           success: false,
           errors: ['Invalid file format: no book data found'],
+          originalJson: rawData, // Store even on failure for debugging
         };
       }
 
@@ -56,6 +58,7 @@ export class FileParserService {
         return {
           success: false,
           errors: errorMessages,
+          originalJson: rawData, // Store even on failure for debugging
         };
       }
 
@@ -65,6 +68,7 @@ export class FileParserService {
       return {
         success: true,
         book: bookDto,
+        originalJson: rawData, // Store original JSON for auditing and re-processing
       };
     } catch (error) {
       // JSON parse error or other unexpected errors
@@ -79,6 +83,7 @@ export class FileParserService {
       return {
         success: false,
         errors: [`Invalid JSON format: ${errorMessage}`],
+        // Cannot store originalJson here since JSON parsing failed
       };
     }
   }

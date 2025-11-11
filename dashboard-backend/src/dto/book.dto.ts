@@ -192,4 +192,11 @@ export class CreateBookDto {
   @IsOptional()
   @IsString()
   sourceFile?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Original JSON from source file (for auditing and re-processing)',
+    example: { book: { title: 'Example', author: 'Author' } },
+  })
+  @IsOptional()
+  originalJson?: any | null;
 }

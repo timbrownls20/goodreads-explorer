@@ -116,9 +116,13 @@ export class Book extends Model {
   @Column({ type: DataType.DATEONLY, allowNull: true })
   reviewDate: Date | null;
 
-  // Source tracking (for debugging)
+  // Source tracking (for debugging and auditing)
   @Column({ type: DataType.STRING(255), allowNull: true })
   sourceFile: string | null;
+
+  // Original JSON from source file (for re-processing and debugging)
+  @Column({ type: DataType.JSONB, allowNull: true })
+  originalJson: any | null;
 
   // Timestamps
   @CreatedAt
