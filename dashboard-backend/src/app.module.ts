@@ -10,6 +10,7 @@ import { AnalyticsEngineService } from './services/analytics-engine.service';
 import { LibraryImportService } from './services/library-import.service';
 import { Library } from './models/library.model';
 import { Book } from './models/book.model';
+import { BookRead } from './models/book-read.model';
 import { Genre } from './models/genre.model';
 import { BookGenre } from './models/book-genre.model';
 import { Shelf } from './models/shelf.model';
@@ -31,13 +32,14 @@ import { BookLiteraryAward } from './models/book-literary-award.model';
     }),
 
     // Register models for dependency injection
-    // Note: Junction tables (BookGenre, BookShelf, BookLiteraryAward) must come before Book, Genre, Shelf, and LiteraryAward
+    // Note: Junction tables must come before their related models
     SequelizeModule.forFeature([
       Library,
       BookGenre,
       BookShelf,
       BookLiteraryAward,
       Book,
+      BookRead,
       Genre,
       Shelf,
       LiteraryAward,

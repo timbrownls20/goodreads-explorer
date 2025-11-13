@@ -152,20 +152,23 @@ export class CreateBookDto {
   dateAdded?: string | null;
 
   @ApiPropertyOptional({
-    description: 'Date started reading',
-    example: '2024-02-01',
+    description: 'Array of read records (multiple readings of the same book)',
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        dateStarted: { type: 'string', format: 'date', nullable: true },
+        dateFinished: { type: 'string', format: 'date', nullable: true },
+      },
+    },
+    example: [
+      { dateStarted: '2024-01-01', dateFinished: '2024-01-15' },
+      { dateStarted: '2024-06-01', dateFinished: null },
+    ],
   })
   @IsOptional()
-  @IsDateString()
-  dateStarted?: string | null;
-
-  @ApiPropertyOptional({
-    description: 'Date finished reading',
-    example: '2024-02-15',
-  })
-  @IsOptional()
-  @IsDateString()
-  dateFinished?: string | null;
+  @IsArray()
+  readRecords?: Array<{ dateStarted: string | null; dateFinished: string | null }>;
 
   // User content
   @ApiPropertyOptional({

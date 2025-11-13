@@ -1,6 +1,7 @@
 import { SequelizeModuleOptions } from '@nestjs/sequelize';
 import { Library } from '../models/library.model';
 import { Book } from '../models/book.model';
+import { BookRead } from '../models/book-read.model';
 import { Genre } from '../models/genre.model';
 import { BookGenre } from '../models/book-genre.model';
 import { Shelf } from '../models/shelf.model';
@@ -15,13 +16,14 @@ export const databaseConfig = (): SequelizeModuleOptions => ({
   username: process.env.POSTGRES_USER || 'analytics_user',
   password: process.env.POSTGRES_PASSWORD || '',
   database: process.env.POSTGRES_DB || 'analytics',
-  // Junction tables (BookGenre, BookShelf, BookLiteraryAward) must come before Book, Genre, Shelf, and LiteraryAward
+  // Junction tables must come before their related models
   models: [
     Library,
     BookGenre,
     BookShelf,
     BookLiteraryAward,
     Book,
+    BookRead,
     Genre,
     Shelf,
     LiteraryAward,

@@ -8,6 +8,7 @@ import {
   ForeignKey,
   BelongsTo,
   BelongsToMany,
+  HasMany,
   CreatedAt,
   UpdatedAt,
 } from 'sequelize-typescript';
@@ -18,6 +19,7 @@ import { Shelf } from './shelf.model';
 import { BookShelf } from './book-shelf.model';
 import { LiteraryAward } from './literary-award.model';
 import { BookLiteraryAward } from './book-literary-award.model';
+import { BookRead } from './book-read.model';
 
 @Table({
   tableName: 'books',
@@ -103,11 +105,9 @@ export class Book extends Model {
   @Column({ type: DataType.DATEONLY, allowNull: true })
   dateAdded: Date | null;
 
-  @Column({ type: DataType.DATEONLY, allowNull: true })
-  dateStarted: Date | null;
-
-  @Column({ type: DataType.DATEONLY, allowNull: true })
-  dateFinished: Date | null;
+  // Reading records - many reads per book
+  @HasMany(() => BookRead)
+  bookReads: BookRead[];
 
   // User content
   @Column({ type: DataType.TEXT, allowNull: true })

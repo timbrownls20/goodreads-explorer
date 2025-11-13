@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import { Book } from '../models/book.model';
+import { BookRead } from '../models/book-read.model';
 import { Genre } from '../models/genre.model';
 import {
   AnalyticsSummaryDto,
@@ -15,6 +16,25 @@ export class AnalyticsEngineService {
     @InjectModel(Book)
     private bookModel: typeof Book,
   ) {}
+
+  /**
+   * Helper: Get most recent finished date from a book's read records
+   */
+  private getMostRecentFinishedDate(book: Book): Date | null {
+    if (!book.bookReads || book.bookReads.length === 0) {
+      return null;
+    }
+
+    const finishedDates = book.bookReads
+      .filter((read) => read.dateFinished)
+      .map((read) => new Date(read.dateFinished!));
+
+    if (finishedDates.length === 0) {
+      return null;
+    }
+
+    return new Date(Math.max(...finishedDates.map((d) => d.getTime())));
+  }
 
   /**
    * Calculate summary statistics for a library with optional filters
@@ -85,13 +105,20 @@ export class AnalyticsEngineService {
 
   /**
    * Get books with filters applied
+   * Always includes bookReads for date-based analytics
    */
   private async getFilteredBooks(
     libraryId: string,
     filters?: FilterRequestDto,
   ): Promise<Book[]> {
     const where: any = { libraryId };
-    const include: any[] = [];
+    const include: any[] = [
+      {
+        model: BookRead,
+        as: 'bookReads',
+        required: false, // LEFT JOIN to include books without reads
+      },
+    ];
 
     if (filters) {
       if (filters.status) {
@@ -108,14 +135,25 @@ export class AnalyticsEngineService {
         }
       }
 
+      // Date filtering now works on book_reads table
       if (filters.dateStart || filters.dateEnd) {
-        where.dateFinished = {};
+        const bookReadsWhere: any = {};
         if (filters.dateStart) {
-          where.dateFinished[Op.gte] = filters.dateStart;
+          bookReadsWhere.dateFinished = { [Op.gte]: filters.dateStart };
         }
         if (filters.dateEnd) {
-          where.dateFinished[Op.lte] = filters.dateEnd;
+          bookReadsWhere.dateFinished = bookReadsWhere.dateFinished
+            ? { ...bookReadsWhere.dateFinished, [Op.lte]: filters.dateEnd }
+            : { [Op.lte]: filters.dateEnd };
         }
+
+        // Update the bookReads include to filter by dates
+        include[0] = {
+          model: BookRead,
+          as: 'bookReads',
+          where: bookReadsWhere,
+          required: true, // INNER JOIN when filtering by dates
+        };
       }
 
       // Genre filtering using many-to-many relationship
@@ -200,16 +238,20 @@ export class AnalyticsEngineService {
    * Calculate average books per month
    */
   private calculateBooksPerMonth(books: Book[]): number {
-    const finishedBooks = books.filter(
-      (b) => b.status === 'read' && b.dateFinished,
-    );
+    const finishedBooks = books.filter((b) => b.status === 'read');
+    const datesArray: Date[] = [];
 
-    if (finishedBooks.length === 0) return 0;
+    finishedBooks.forEach((book) => {
+      const finishDate = this.getMostRecentFinishedDate(book);
+      if (finishDate) {
+        datesArray.push(finishDate);
+      }
+    });
+
+    if (datesArray.length === 0) return 0;
 
     // Find date range
-    const dates = finishedBooks
-      .map((b) => new Date(b.dateFinished!).getTime())
-      .sort((a, b) => a - b);
+    const dates = datesArray.map((d) => d.getTime()).sort((a, b) => a - b);
 
     const earliestDate = new Date(dates[0]);
     const latestDate = new Date(dates[dates.length - 1]);
@@ -220,7 +262,7 @@ export class AnalyticsEngineService {
       (latestDate.getMonth() - earliestDate.getMonth()) +
       1;
 
-    const booksPerMonth = finishedBooks.length / monthsDiff;
+    const booksPerMonth = datesArray.length / monthsDiff;
     return Math.round(booksPerMonth * 100) / 100; // Round to 2 decimals
   }
 
@@ -228,19 +270,19 @@ export class AnalyticsEngineService {
    * Calculate reading streak (consecutive months with at least one book)
    */
   private calculateReadingStreak(books: Book[]): number {
-    const finishedBooks = books
-      .filter((b) => b.status === 'read' && b.dateFinished)
-      .map((b) => ({
-        year: new Date(b.dateFinished!).getFullYear(),
-        month: new Date(b.dateFinished!).getMonth(),
-      }));
+    const finishedBooks = books.filter((b) => b.status === 'read');
+    const monthsWithBooks = new Set<string>();
 
-    if (finishedBooks.length === 0) return 0;
+    finishedBooks.forEach((book) => {
+      const finishDate = this.getMostRecentFinishedDate(book);
+      if (finishDate) {
+        const year = finishDate.getFullYear();
+        const month = finishDate.getMonth();
+        monthsWithBooks.add(`${year}-${month}`);
+      }
+    });
 
-    // Group by year-month
-    const monthsWithBooks = new Set(
-      finishedBooks.map((d) => `${d.year}-${d.month}`),
-    );
+    if (monthsWithBooks.size === 0) return 0;
 
     // Find longest streak ending at current month
     const now = new Date();
@@ -261,11 +303,14 @@ export class AnalyticsEngineService {
    * Count books finished in a specific year
    */
   private countBooksInYear(books: Book[], year: number): number {
-    return books.filter((b) => {
-      if (!b.dateFinished) return false;
-      const finishedYear = new Date(b.dateFinished).getFullYear();
-      return finishedYear === year;
-    }).length;
+    let count = 0;
+    books.forEach((book) => {
+      const finishDate = this.getMostRecentFinishedDate(book);
+      if (finishDate && finishDate.getFullYear() === year) {
+        count++;
+      }
+    });
+    return count;
   }
 
   /**
@@ -275,15 +320,20 @@ export class AnalyticsEngineService {
     earliest: string | null;
     latest: string | null;
   } {
-    const finishedBooks = books.filter((b) => b.dateFinished);
+    const datesArray: Date[] = [];
 
-    if (finishedBooks.length === 0) {
+    books.forEach((book) => {
+      const finishDate = this.getMostRecentFinishedDate(book);
+      if (finishDate) {
+        datesArray.push(finishDate);
+      }
+    });
+
+    if (datesArray.length === 0) {
       return { earliest: null, latest: null };
     }
 
-    const dates = finishedBooks
-      .map((b) => new Date(b.dateFinished!).getTime())
-      .sort((a, b) => a - b);
+    const dates = datesArray.map((d) => d.getTime()).sort((a, b) => a - b);
 
     return {
       earliest: new Date(dates[0]).toISOString().split('T')[0],

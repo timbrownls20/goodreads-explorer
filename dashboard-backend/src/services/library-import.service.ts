@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { FileParserService } from './file-parser.service';
 import { Library } from '../models/library.model';
 import { Book } from '../models/book.model';
+import { BookRead } from '../models/book-read.model';
 import { Genre } from '../models/genre.model';
 import { BookGenre } from '../models/book-genre.model';
 import { Shelf } from '../models/shelf.model';
@@ -33,6 +34,8 @@ export class LibraryImportService {
     private libraryModel: typeof Library,
     @InjectModel(Book)
     private bookModel: typeof Book,
+    @InjectModel(BookRead)
+    private bookReadModel: typeof BookRead,
     @InjectModel(Genre)
     private genreModel: typeof Genre,
     @InjectModel(BookGenre)
@@ -110,9 +113,9 @@ export class LibraryImportService {
         const shelfMap = await this.createShelvesFromBooks(validBooks);
         const literaryAwardMap = await this.createLiteraryAwardsFromBooks(validBooks);
 
-        // Step 2: Remove genres, shelves, and literaryAwards from book data before saving
-        // (these are now handled via many-to-many relationships)
-        const booksWithoutRelations = validBooks.map(({ genres, shelves, literaryAwards, ...book }) => book);
+        // Step 2: Remove genres, shelves, literaryAwards, and readRecords from book data before saving
+        // (these are now handled via relationships)
+        const booksWithoutRelations = validBooks.map(({ genres, shelves, literaryAwards, readRecords, ...book }) => book);
 
         // Step 3: Save books (upsert based on libraryId + sourceFile)
         const result = await this.bookModel.bulkCreate(booksWithoutRelations, {
@@ -130,8 +133,6 @@ export class LibraryImportService {
             'coverImageUrl',
             'goodreadsUrl',
             'dateAdded',
-            'dateStarted',
-            'dateFinished',
             'review',
             'reviewDate',
             'sourceFile',
@@ -144,6 +145,9 @@ export class LibraryImportService {
         await this.linkBooksToGenres(validBooks, result, genreMap);
         await this.linkBooksToShelves(validBooks, result, shelfMap);
         await this.linkBooksToLiteraryAwards(validBooks, result, literaryAwardMap);
+
+        // Step 5: Create book_reads records
+        await this.createBookReads(validBooks, result);
 
         stats.booksImported = result.length;
 
@@ -480,6 +484,52 @@ export class LibraryImportService {
 
       logger.info('Book-literary-award relationships created', {
         count: bookAwardRecords.length,
+      });
+    }
+  }
+
+  /**
+   * Create BookRead records for all read records
+   */
+  private async createBookReads(
+    originalBooks: any[],
+    savedBooks: Book[],
+  ): Promise<void> {
+    const bookReadRecords: Array<{
+      bookId: string;
+      dateStarted: Date | null;
+      dateFinished: Date | null;
+    }> = [];
+
+    // Create book_read records from readRecords array
+    savedBooks.forEach((savedBook, index) => {
+      const originalBook = originalBooks[index];
+      if (originalBook.readRecords && Array.isArray(originalBook.readRecords)) {
+        originalBook.readRecords.forEach((readRecord: any) => {
+          // Only create a record if at least one date exists
+          if (readRecord.dateStarted || readRecord.dateFinished) {
+            bookReadRecords.push({
+              bookId: savedBook.id,
+              dateStarted: readRecord.dateStarted ? new Date(readRecord.dateStarted) : null,
+              dateFinished: readRecord.dateFinished ? new Date(readRecord.dateFinished) : null,
+            });
+          }
+        });
+      }
+    });
+
+    if (bookReadRecords.length > 0) {
+      // Delete existing read records for these books (in case of re-import)
+      const bookIds = savedBooks.map((book) => book.id);
+      await this.bookReadModel.destroy({
+        where: { bookId: bookIds },
+      });
+
+      // Create new read records
+      await this.bookReadModel.bulkCreate(bookReadRecords);
+
+      logger.info('Book read records created', {
+        count: bookReadRecords.length,
       });
     }
   }

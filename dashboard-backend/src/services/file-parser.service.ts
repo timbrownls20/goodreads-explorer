@@ -147,15 +147,16 @@ export class FileParserService {
       });
     }
 
-    // Extract date_started and date_finished from read_records
-    // Take the most recent record (last in array) if multiple exist
-    let dateStarted: string | null = null;
-    let dateFinished: string | null = null;
+    // Extract ALL read_records (supports multiple readings of the same book)
+    const readRecords: Array<{ dateStarted: string | null; dateFinished: string | null }> = [];
 
     if (userBook.read_records && Array.isArray(userBook.read_records) && userBook.read_records.length > 0) {
-      const mostRecentRecord = userBook.read_records[userBook.read_records.length - 1];
-      dateStarted = mostRecentRecord.date_started || null;
-      dateFinished = mostRecentRecord.date_finished || null;
+      userBook.read_records.forEach((record: any) => {
+        readRecords.push({
+          dateStarted: record.date_started || null,
+          dateFinished: record.date_finished || null,
+        });
+      });
     }
 
     // Normalize reading_status to match backend enum
@@ -193,8 +194,7 @@ export class FileParserService {
       genres: book.genres || [],
       shelves: shelfNames,
       dateAdded: userBook.date_added || null,
-      dateStarted,
-      dateFinished,
+      readRecords, // Array of all read records for this book
       review: userBook.review || null,
       reviewDate: userBook.review_date || null,
     };
