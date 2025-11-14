@@ -31,3 +31,4 @@ Python 3.10+ (Python 3.12 recommended for development): Follow standard conventi
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
+- use pnpm for package manager unless instructed otherwise

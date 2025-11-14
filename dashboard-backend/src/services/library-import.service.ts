@@ -506,14 +506,12 @@ export class LibraryImportService {
       const originalBook = originalBooks[index];
       if (originalBook.readRecords && Array.isArray(originalBook.readRecords)) {
         originalBook.readRecords.forEach((readRecord: any) => {
-          // Only create a record if at least one date exists
-          if (readRecord.dateStarted || readRecord.dateFinished) {
-            bookReadRecords.push({
-              bookId: savedBook.id,
-              dateStarted: readRecord.dateStarted ? new Date(readRecord.dateStarted) : null,
-              dateFinished: readRecord.dateFinished ? new Date(readRecord.dateFinished) : null,
-            });
-          }
+          // Create a record for each read entry, even if both dates are null
+          bookReadRecords.push({
+            bookId: savedBook.id,
+            dateStarted: readRecord.dateStarted ? new Date(readRecord.dateStarted) : null,
+            dateFinished: readRecord.dateFinished ? new Date(readRecord.dateFinished) : null,
+          });
         });
       }
     });

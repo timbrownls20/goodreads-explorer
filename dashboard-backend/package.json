@@ -23,8 +23,10 @@
     "migration:undo:all": "sequelize-cli db:migrate:undo:all",
     "migration:status": "sequelize-cli db:migrate:status",
     "db:sync": "ts-node -r tsconfig-paths/register src/cli/sync-database.ts",
-    "cli:reload": "ts-node -r tsconfig-paths/register src/cli/reload-library.ts",
-    "db:clear": "ts-node -r tsconfig-paths/register src/cli/clear-database.ts"
+    "library:load": "ts-node -r tsconfig-paths/register src/cli/reload-library.ts",
+    "library:load:sample": "ts-node -r tsconfig-paths/register src/cli/reload-library.ts /Users/timbrown/Development/goodreads-explorer/parser/tim-brown_library",
+    "db:clear": "ts-node -r tsconfig-paths/register src/cli/clear-database.ts",
+    "scrape": "ts-node -r tsconfig-paths/register src/cli/scrape-library.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
@@ -33,8 +35,12 @@
     "@nestjs/platform-express": "^10.3.0",
     "@nestjs/sequelize": "^11.0.1",
     "@nestjs/swagger": "^7.1.17",
+    "@types/cheerio": "^1.0.0",
+    "axios": "^1.13.2",
+    "cheerio": "^1.1.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
+    "commander": "^14.0.2",
     "express-session": "^1.17.3",
     "multer": "^1.4.5-lts.1",
     "pg": "^8.11.3",
