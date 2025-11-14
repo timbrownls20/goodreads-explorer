@@ -33,16 +33,16 @@ pnpm run build
 
 ```bash
 # Basic scrape (outputs to library.json)
-pnpm run scrape scrape https://www.goodreads.com/user/show/12345-username
+pnpm run scrape scrape https://www.goodreads.com/user/show/172435467-tim-brown
 
 # Scrape to CSV
-pnpm run scrape scrape https://www.goodreads.com/user/show/12345 -f csv -o my-library.csv
+pnpm run scrape scrape https://www.goodreads.com/user/show/172435467-tim-brown5 -f csv -o my-library.csv
 
 # Scrape with individual book files
-pnpm run scrape scrape https://www.goodreads.com/user/show/12345 --per-book-files -d ./books
+pnpm run scrape scrape hhttps://www.goodreads.com/user/show/172435467-tim-brown --per-book-files -d ./books
 
 # Scrape first 100 books with slower rate limit
-pnpm run scrape scrape https://www.goodreads.com/user/show/12345 --limit 100 --rate-limit 2000
+pnpm run scrape scrape https://www.goodreads.com/user/show/172435467-tim-brown --limit 100 --rate-limit 2000
 
 # Show help
 pnpm run scrape help
