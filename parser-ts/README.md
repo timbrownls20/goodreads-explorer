@@ -6,7 +6,7 @@ A TypeScript library and CLI tool for scraping Goodreads user libraries. This is
 
 - 🚀 **Fast & Reliable**: Built with TypeScript for type safety and performance
 - 📚 **Complete Data Extraction**: Scrapes books, ratings, shelves, reviews, and read records
-- 💾 **Multiple Export Formats**: JSON and CSV output
+- 💾 **Individual Book Files**: Each book saved as separate JSON file for easy processing
 - ⚡ **Rate Limiting**: Configurable request delays to respect Goodreads servers
 - 🔄 **Retry Logic**: Automatic retry with exponential backoff
 - ✅ **Data Validation**: Comprehensive validation using class-validator
@@ -32,14 +32,11 @@ pnpm run build
 ### CLI Usage
 
 ```bash
-# Basic scrape (outputs to library.json)
+# Basic scrape (outputs individual JSON files per book)
 pnpm run scrape scrape https://www.goodreads.com/user/show/172435467-tim-brown
 
-# Scrape to CSV
-pnpm run scrape scrape https://www.goodreads.com/user/show/172435467-tim-brown5 -f csv -o my-library.csv
-
-# Scrape with individual book files
-pnpm run scrape scrape hhttps://www.goodreads.com/user/show/172435467-tim-brown --per-book-files -d ./books
+# Scrape to custom directory
+pnpm run scrape scrape https://www.goodreads.com/user/show/172435467-tim-brown -d ./books
 
 # Scrape first 100 books with slower rate limit
 pnpm run scrape scrape https://www.goodreads.com/user/show/172435467-tim-brown --limit 100 --rate-limit 2000
@@ -51,14 +48,13 @@ pnpm run scrape help
 ### Library Usage
 
 ```typescript
-import { scrapeAndExport, scrapeLibrary } from 'goodreads-parser-ts';
+import { scrapeLibrary } from 'goodreads-parser-ts';
 
-// Scrape and export to JSON
-const library = await scrapeAndExport(
+// Scrape library (individual book files are saved automatically)
+const library = await scrapeLibrary(
   'https://www.goodreads.com/user/show/12345-username',
   {
-    outputFormat: 'json',
-    outputPath: './library.json',
+    outputDir: './my-library',
     rateLimitDelay: 1000,
     maxRetries: 3,
     progressCallback: (current, total) => {
@@ -68,15 +64,7 @@ const library = await scrapeAndExport(
 );
 
 console.log(`Scraped ${library.totalBooks} books from ${library.username}`);
-
-// Just scrape (no export)
-const library = await scrapeLibrary(
-  'https://www.goodreads.com/user/show/12345-username',
-  {
-    limit: 100,
-    rateLimitDelay: 1500,
-  }
-);
+console.log(`Files saved to: ./my-library/${library.username}_library/`);
 
 // Access library data
 console.log(`Total books: ${library.totalBooks}`);
@@ -88,15 +76,12 @@ console.log(`Books with reviews: ${library.getBooksWithReviews().length}`);
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `-f, --format <format>` | Output format: `json` or `csv` | `json` |
-| `-o, --output <path>` | Output file path | `library.[format]` |
 | `-d, --output-dir <dir>` | Directory for individual book files | `./output` |
 | `--rate-limit <ms>` | Delay between requests (ms) | `1000` |
 | `--max-retries <count>` | Maximum retry attempts | `3` |
 | `--timeout <ms>` | Request timeout (ms) | `30000` |
 | `--limit <count>` | Maximum books to scrape | unlimited |
 | `--sort-by <field>` | Sort order | none |
-| `--per-book-files` | Save individual JSON per book | `false` |
 | `--no-progress` | Disable progress reporting | `false` |
 
 ### Sort Options
@@ -113,7 +98,7 @@ console.log(`Books with reviews: ${library.getBooksWithReviews().length}`);
 
 #### `scrapeLibrary(profileUrl, options?)`
 
-Scrape a Goodreads library and return a Library object.
+Scrape a Goodreads library and return a Library object. Individual book JSON files are automatically saved during scraping.
 
 ```typescript
 interface ScraperOptions {
@@ -122,20 +107,8 @@ interface ScraperOptions {
   timeout?: number;              // request timeout in ms (default: 30000)
   limit?: number;                // max books to scrape (default: unlimited)
   sort?: string | null;          // sort order (default: null)
-  saveIndividualBooks?: boolean; // save per-book JSON files (default: false)
-  outputDir?: string;            // output directory for individual books
+  outputDir?: string;            // output directory for individual books (default: './output')
   progressCallback?: (current: number, total: number) => void;
-}
-```
-
-#### `scrapeAndExport(profileUrl, options?)`
-
-Scrape and export library to file.
-
-```typescript
-interface ExportOptions extends ScraperOptions {
-  outputFormat?: 'json' | 'csv';
-  outputPath?: string;
 }
 ```
 
@@ -281,51 +254,49 @@ pnpm run lint
 pnpm run format
 ```
 
-## Output Formats
+## Output Format
 
-### JSON Format
+### Individual Book JSON Files
 
-Single file containing all library data:
+Each book is saved as a separate JSON file in the output directory, organized by username:
+
+```
+./output/
+  └── johndoe_library/
+      ├── 190065.Monkey.json
+      ├── 54321.Another-Book.json
+      └── ...
+```
+
+Each file contains complete book data and user metadata:
 
 ```json
 {
-  "user_id": "12345",
-  "username": "johndoe",
-  "profile_url": "https://www.goodreads.com/user/show/12345",
-  "scraped_at": "2025-11-14T00:00:00.000Z",
-  "schema_version": "1.0.0",
-  "total_books": 150,
-  "user_books": [
-    {
-      "book": {
-        "goodreads_id": "190065.Monkey",
-        "title": "Monkey: A Journey to the West",
-        "author": "Wu Cheng'en",
-        "genres": ["classics", "fiction", "fantasy"],
-        "average_rating": 4.04,
-        "ratings_count": 7982
-      },
-      "user_rating": null,
-      "reading_status": "read",
-      "shelves": [
-        { "name": "read", "is_builtin": true }
-      ],
-      "read_records": [
-        { "date_started": null, "date_finished": null }
-      ]
-    }
-  ]
+  "book": {
+    "goodreadsId": "190065.Monkey",
+    "title": "Monkey: A Journey to the West",
+    "author": "Wu Cheng'en",
+    "genres": ["classics", "fiction", "fantasy"],
+    "averageRating": 4.04,
+    "ratingsCount": 7982,
+    "goodreadsUrl": "https://www.goodreads.com/book/show/190065"
+  },
+  "userRating": null,
+  "readingStatus": "read",
+  "shelves": [
+    { "name": "read", "isBuiltin": true }
+  ],
+  "readRecords": [
+    { "dateStarted": null, "dateFinished": null }
+  ],
+  "review": null,
+  "dateAdded": "2023-12-12",
+  "scrapedAt": "2025-11-14T00:00:00.000Z",
+  "_metadata": {
+    "username": "johndoe",
+    "exportedAt": null
+  }
 }
-```
-
-### CSV Format
-
-One row per book-shelf combination:
-
-```csv
-goodreads_id,title,author,user_rating,reading_status,shelf,date_added,...
-190065.Monkey,Monkey: A Journey to the West,Wu Cheng'en,,read,read,2023-12-12,...
-190065.Monkey,Monkey: A Journey to the West,Wu Cheng'en,,read,travel,2023-12-12,...
 ```
 
 ## Error Handling
@@ -359,20 +330,18 @@ try {
 - **cheerio** - HTML parsing
 - **class-validator** - Data validation
 - **class-transformer** - Object transformation
-- **commander** - CLI framework
 - **winston** - Logging
 
 ## Migration from Python Parser
 
-This TypeScript parser is 100% compatible with the Python version:
+This TypeScript parser provides similar functionality to the Python version with some improvements:
 
-- ✅ Same JSON output format
-- ✅ Same CSV structure
-- ✅ Same CLI commands
-- ✅ Same data models
-- ✅ Same validation rules
+- ✅ Individual book files for better data organization
+- ✅ Same data models and validation rules
+- ✅ Similar CLI interface
+- ⚠️ No single-file or CSV export (use per-book JSON files instead)
 
-You can use JSON files from either parser interchangeably.
+The per-book JSON format is similar to the Python parser's output, making data migration straightforward.
 
 ## Known Limitations
 

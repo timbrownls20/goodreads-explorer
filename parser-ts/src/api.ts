@@ -1,15 +1,8 @@
 import { GoodreadsScraper, ScraperOptions } from './scrapers/goodreads-scraper';
 import { Library } from './models/library.model';
-import { JsonExporter } from './exporters/json-exporter';
-import { CsvExporter } from './exporters/csv-exporter';
 
 export interface ScrapeOptions extends ScraperOptions {
   // Inherited from ScraperOptions
-}
-
-export interface ExportOptions extends ScrapeOptions {
-  outputFormat?: 'json' | 'csv';
-  outputPath?: string;
 }
 
 /**
@@ -25,24 +18,14 @@ export async function scrapeLibrary(
 }
 
 /**
- * Scrape and export library - convenience wrapper
+ * Scrape library - individual book files are saved automatically during scraping
+ * @deprecated Use scrapeLibrary() instead - this function is kept for backwards compatibility
  */
 export async function scrapeAndExport(
   profileUrl: string,
-  options: ExportOptions = {}
+  options: ScrapeOptions = {}
 ): Promise<Library> {
   const library = await scrapeLibrary(profileUrl, options);
-
-  if (options.outputPath) {
-    const format = options.outputFormat || 'json';
-
-    if (format === 'json') {
-      JsonExporter.exportToJson(library, options.outputPath);
-    } else if (format === 'csv') {
-      CsvExporter.exportToCsv(library, options.outputPath);
-    }
-  }
-
   return library;
 }
 
@@ -53,5 +36,4 @@ export { UserBookRelation, Review, ReadRecord } from './models/user-book.model';
 export { Shelf, ReadingStatus } from './models/shelf.model';
 export { GoodreadsScraper } from './scrapers/goodreads-scraper';
 export { JsonExporter } from './exporters/json-exporter';
-export { CsvExporter } from './exporters/csv-exporter';
 export * from './exceptions/parser-exceptions';

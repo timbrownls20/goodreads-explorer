@@ -25,7 +25,6 @@ export interface ScraperOptions {
   timeout?: number; // request timeout in ms (default 30000)
   limit?: number; // max books to scrape (default null = all)
   sort?: string | null; // sort order (default null)
-  saveIndividualBooks?: boolean; // save per-book JSON files (default false)
   outputDir?: string; // output directory for individual books
   progressCallback?: (current: number, total: number) => void;
 }
@@ -41,7 +40,6 @@ export class GoodreadsScraper {
       timeout: options.timeout ?? 30000,
       limit: options.limit ?? 0,
       sort: options.sort ?? null,
-      saveIndividualBooks: options.saveIndividualBooks ?? false,
       outputDir: options.outputDir ?? './output',
       progressCallback: options.progressCallback ?? (() => {}),
     };
@@ -156,7 +154,7 @@ export class GoodreadsScraper {
       const $ = cheerio.load(html);
 
       // Parse books from table
-      const books = await this.extractBooksFromPage($, status, userId, username);
+      const books = await this.extractBooksFromPage($, status, username);
       userBooks.push(...books);
 
       this.options.progressCallback(userBooks.length, 0);
@@ -183,7 +181,6 @@ export class GoodreadsScraper {
   private async extractBooksFromPage(
     $: cheerio.CheerioAPI,
     status: ReadingStatus,
-    userId: string,
     username: string
   ): Promise<UserBookRelation[]> {
     const userBooks: UserBookRelation[] = [];
@@ -193,7 +190,7 @@ export class GoodreadsScraper {
 
     for (const row of bookRows) {
       try {
-        const userBook = await this.parseBookRow($, $(row), status, userId, username);
+        const userBook = await this.parseBookRow($, $(row), status, username);
         if (userBook) {
           userBooks.push(userBook);
         }
@@ -214,7 +211,6 @@ export class GoodreadsScraper {
     $: cheerio.CheerioAPI,
     $row: cheerio.Cheerio<any>,
     status: ReadingStatus,
-    userId: string,
     username: string
   ): Promise<UserBookRelation | null> {
     // Extract basic info from table row
@@ -301,17 +297,15 @@ export class GoodreadsScraper {
       goodreadsUrl: fullBookUrl,
     });
 
-    // Save individual book file if requested
-    if (this.options.saveIndividualBooks) {
-      await this.saveIndividualBook(book, {
-        userRating,
-        readingStatus: status,
-        shelves,
-        review,
-        dateAdded,
-        readRecords,
-      }, userId, username);
-    }
+    // Save individual book file
+    await this.saveIndividualBook(book, {
+      userRating,
+      readingStatus: status,
+      shelves,
+      review,
+      dateAdded,
+      readRecords,
+    }, username);
 
     // Create user-book relation
     const userBook = new UserBookRelation({
@@ -340,7 +334,6 @@ export class GoodreadsScraper {
       dateAdded: string | null;
       readRecords: ReadRecord[];
     },
-    userId: string,
     username: string
   ): Promise<void> {
     const outputDir = path.join(this.options.outputDir, `${username}_library`);

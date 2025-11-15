@@ -10,5 +10,4 @@ export * from './parsers/book-parser';
 export * from './validators/url-validator';
 export * from './validators/data-validator';
 export * from './exporters/json-exporter';
-export * from './exporters/csv-exporter';
 export * from './exceptions/parser-exceptions';
