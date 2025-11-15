@@ -58,11 +58,50 @@ function cleanDateText(text: string | undefined | null, prefix: string): string 
       cleaned.toLowerCase() === 'none' ||
       cleaned.toLowerCase() === 'null' ||
       cleaned.toLowerCase() === 'n/a' ||
+      cleaned.toLowerCase() === 'not set' ||
       cleaned === '-') {
     return null;
   }
 
   return cleaned;
+}
+
+/**
+ * Parse Goodreads date string to ISO 8601 format
+ * Handles formats like "Oct 07, 2025", "October 7, 2025", etc.
+ */
+function parseGoodreadsDate(dateStr: string | null): string | null {
+  if (!dateStr) return null;
+
+  try {
+    // Month abbreviations to numbers
+    const months: Record<string, string> = {
+      jan: '01', feb: '02', mar: '03', apr: '04',
+      may: '05', jun: '06', jul: '07', aug: '08',
+      sep: '09', oct: '10', nov: '11', dec: '12',
+      january: '01', february: '02', march: '03', april: '04',
+      june: '06', july: '07', august: '08', september: '09',
+      october: '10', november: '11', december: '12'
+    };
+
+    // Try to match "Oct 07, 2025" or "October 7, 2025" format
+    const match = dateStr.match(/([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})/);
+    if (match) {
+      const monthStr = match[1].toLowerCase();
+      const day = match[2].padStart(2, '0');
+      const year = match[3];
+      const month = months[monthStr];
+
+      if (month) {
+        return `${year}-${month}-${day}T00:00:00`;
+      }
+    }
+
+    // If no match, return null
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export interface ScraperOptions {
@@ -333,7 +372,8 @@ export class GoodreadsScraper {
 
     // Extract date added
     const dateAddedRaw = $row.find('.date_added, .field.date_added').first().text();
-    const dateAdded = cleanDateText(dateAddedRaw, 'date added');
+    const dateAddedCleaned = cleanDateText(dateAddedRaw, 'date added');
+    const dateAdded = parseGoodreadsDate(dateAddedCleaned);
 
     // Extract review (if any)
     let review: Review | null = null;
@@ -351,7 +391,8 @@ export class GoodreadsScraper {
     // Extract read dates
     const readRecords: ReadRecord[] = [];
     const dateReadRaw = $row.find('.date_read, .field.date_read').first().text();
-    const dateReadText = cleanDateText(dateReadRaw, 'date read');
+    const dateReadCleaned = cleanDateText(dateReadRaw, 'date read');
+    const dateReadText = parseGoodreadsDate(dateReadCleaned);
 
     if (dateReadText) {
       readRecords.push(
@@ -370,13 +411,34 @@ export class GoodreadsScraper {
       );
     }
 
-    // Create basic book object
+    // Fetch book page to get complete metadata
+    logger.debug('Fetching book page', { bookUrl: fullBookUrl });
+    const bookHtml = await this.fetchWithRetry(fullBookUrl);
+    const bookData = BookParser.parseBookPage(bookHtml, fullBookUrl);
+
+    // Create complete book object with all metadata
     const book = new Book({
-      goodreadsId: fullBookUrl.match(/\/book\/show\/([^/?]+)/)?.[1] || '',
-      title,
-      author,
+      goodreadsId: bookData.goodreadsId || fullBookUrl.match(/\/book\/show\/([^/?]+)/)?.[1] || '',
+      title: bookData.title || title,
+      author: bookData.author || author,
+      additionalAuthors: bookData.additionalAuthors,
+      isbn: bookData.isbn,
+      isbn13: bookData.isbn13,
+      publicationDate: bookData.publicationDate,
+      publisher: bookData.publisher,
+      pageCount: bookData.pageCount,
+      language: bookData.language,
+      setting: bookData.setting,
+      literaryAwards: bookData.literaryAwards,
+      genres: bookData.genres,
+      averageRating: bookData.averageRating,
+      ratingsCount: bookData.ratingsCount,
+      coverImageUrl: bookData.coverImageUrl,
       goodreadsUrl: fullBookUrl,
     });
+
+    // Rate limit between book page requests
+    await this.sleep(this.options.rateLimitDelay);
 
     // Save individual book file
     await this.saveIndividualBook(book, {
@@ -428,21 +490,51 @@ export class GoodreadsScraper {
     const filename = `${book.goodreadsId}.json`;
     const filepath = path.join(outputDir, filename);
 
+    // Format data to match Python parser output (snake_case)
     const data = {
       book: {
-        ...book,
+        goodreads_id: book.goodreadsId,
+        title: book.title,
+        author: book.author,
+        additional_authors: book.additionalAuthors || [],
+        isbn: book.isbn,
+        isbn13: book.isbn13,
+        publication_date: book.publicationDate,
+        publisher: book.publisher,
+        page_count: book.pageCount,
+        language: book.language,
+        setting: book.setting,
+        literary_awards: book.literaryAwards || [],
+        genres: book.genres || [],
+        average_rating: book.averageRating,
+        ratings_count: book.ratingsCount,
+        cover_image_url: book.coverImageUrl,
+        goodreads_url: book.goodreadsUrl,
       },
-      review: userData.review,
-      shelves: userData.shelves,
+      user_rating: userData.userRating,
+      reading_status: userData.readingStatus,
+      shelves: userData.shelves.map(s => ({
+        name: s.name,
+        is_builtin: s.isBuiltin,
+        book_count: s.bookCount,
+      })),
+      review: userData.review
+        ? {
+            review_text: userData.review.reviewText,
+            review_date: userData.review.reviewDate,
+            likes_count: userData.review.likesCount,
+          }
+        : null,
+      date_added: userData.dateAdded,
+      read_records: userData.readRecords.map(rr => ({
+        date_started: rr.dateStarted,
+        date_finished: rr.dateFinished,
+      })),
+      scraped_at: new Date().toISOString(),
       _metadata: {
         username,
-        exportedAt: null,
+        exported_at: null,
       },
-      dateAdded: userData.dateAdded,
-      scrapedAt: new Date().toISOString(),
-      userRating: userData.userRating,
-      readRecords: userData.readRecords,
-      readingStatus: userData.readingStatus,
     };
 
     fs.writeFileSync(filepath, JSON.stringify(data, null, 2), 'utf-8');
