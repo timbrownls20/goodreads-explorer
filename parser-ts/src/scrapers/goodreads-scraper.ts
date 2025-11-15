@@ -150,28 +150,32 @@ export class GoodreadsScraper {
 
     const { normalizedUrl, userId } = validation;
 
-    logger.info('Starting library scrape', { userId, profileUrl: normalizedUrl });
+    // Always use the review list page as the primary page for parsing
+    // This page has the proper shelf structure with horizontal divider
+    const reviewListUrl = `https://www.goodreads.com/review/list/${userId}`;
 
-    // Fetch initial page to get username and check if profile is private
-    const initialHtml = await this.fetchWithRetry(normalizedUrl);
-    const isPrivate = this.isPrivateProfile(initialHtml);
+    logger.info('Starting library scrape', { userId, profileUrl: normalizedUrl, reviewListUrl });
+
+    // Fetch the review list page (My Books page) for parsing
+    const reviewListHtml = await this.fetchWithRetry(reviewListUrl);
+    const isPrivate = this.isPrivateProfile(reviewListHtml);
 
     if (isPrivate) {
       throw new PrivateProfileError();
     }
 
-    const libraryResult = LibraryParser.parseLibraryPage(initialHtml, normalizedUrl);
+    const libraryResult = LibraryParser.parseLibraryPage(reviewListHtml, reviewListUrl);
     const username = libraryResult.username || `user-${userId}`;
 
     logger.info('Profile validated', { userId, username });
 
     // Extract exclusive reading status shelves from sidebar
-    const exclusiveShelves = LibraryParser.parseReadingStatusShelves(initialHtml);
+    const exclusiveShelves = LibraryParser.parseReadingStatusShelves(reviewListHtml);
 
     // Debug: Save HTML to file for inspection
     if (process.env.DEBUG_HTML) {
       const debugPath = '/tmp/goodreads-library-page.html';
-      fs.writeFileSync(debugPath, initialHtml, 'utf-8');
+      fs.writeFileSync(debugPath, reviewListHtml, 'utf-8');
       logger.debug(`Saved library page HTML to ${debugPath} for debugging`);
     }
 

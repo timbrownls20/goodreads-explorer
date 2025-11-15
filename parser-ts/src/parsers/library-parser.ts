@@ -130,60 +130,37 @@ export class LibraryParser {
    * Parse exclusive reading status shelves from HTML sidebar
    * Extracts shelves that appear BEFORE the horizontal divider
    * (matching Python parser logic)
+   *
+   * Exclusive shelves are reading-status shelves where a book can only be on ONE at a time.
+   * These appear before the horizontalGreyDivider in the paginatedShelfList.
    */
   static parseReadingStatusShelves(html: string): Array<{ slug: string; count: number }> {
     const $ = cheerio.load(html);
     const shelves: Array<{ slug: string; count: number }> = [];
 
-    // Try multiple selectors for the shelf list container
-    let shelfListContainer = $('.paginatedShelfList');
+    // Find the paginatedShelfList div
+    const shelfListContainer = $('#paginatedShelfList');
 
     if (shelfListContainer.length === 0) {
-      shelfListContainer = $('#paginatedShelfList');
+      const errorMsg = 'Could not find paginatedShelfList div in review list page HTML';
+      logger.error(errorMsg);
+      throw new ScrapingError(errorMsg);
     }
 
-    if (shelfListContainer.length === 0) {
-      // Try finding by id attribute pattern
-      shelfListContainer = $('[id*="ShelfList"], [class*="ShelfList"]');
-    }
-
-    if (shelfListContainer.length === 0) {
-      logger.warn('Could not find shelf list container, trying alternative approach');
-
-      // Alternative: Find all divs with "Bookshelves" header and get the next container
-      const bookshelvesHeader = $(':contains("Bookshelves")').filter(function() {
-        return $(this).text().trim().startsWith('Bookshelves');
-      }).first();
-
-      if (bookshelvesHeader.length > 0) {
-        shelfListContainer = bookshelvesHeader.next('div');
-        logger.debug('Found shelf container via Bookshelves header');
-      }
-    }
-
-    if (shelfListContainer.length === 0) {
-      logger.warn('Could not find shelf list container at all, using defaults');
-      return [
-        { slug: 'read', count: 0 },
-        { slug: 'currently-reading', count: 0 },
-        { slug: 'to-read', count: 0 },
-      ];
-    }
-
-    // Iterate through direct children only, stopping at horizontal divider
+    // Iterate through direct children, stopping at horizontal divider
     shelfListContainer.children().each((_, elem) => {
       const $elem = $(elem);
 
-      // Stop at horizontal divider
+      // Stop at horizontal divider (this separates exclusive from non-exclusive shelves)
       if ($elem.hasClass('horizontalGreyDivider')) {
-        logger.debug('Found horizontal divider, stopping shelf extraction');
+        logger.debug('Found horizontal divider, stopping exclusive shelf extraction');
         return false; // Break out of .each()
       }
 
-      // Look for shelf links within this element
-      const $link = $elem.find('a[href*="shelf="]').first();
+      // Look for shelf links within this element (should be in userShelf divs)
+      const $link = $elem.find('a.actionLinkLite[href*="shelf="]').first();
       if ($link.length === 0) {
-        return; // No link, continue to next
+        return; // No link in this element, continue to next
       }
 
       const href = $link.attr('href');
@@ -195,30 +172,25 @@ export class LibraryParser {
 
       const slug = match[1];
 
-      // Skip "all" shelf
-      if (slug === 'all') {
-        return; // Continue to next iteration
-      }
-
-      // Extract count - look for number in parentheses
-      const elemText = $elem.text();
-      const countMatch = elemText.match(/\((\d+)\)/);
+      // Extract count - look for number in parentheses in the link text
+      const linkText = $link.text();
+      const countMatch = linkText.match(/\((\d+)\)/);
       const count = countMatch ? parseInt(countMatch[1], 10) : 0;
 
       shelves.push({ slug, count });
+      logger.debug(`Found exclusive shelf: ${slug} (${count} books)`);
     });
 
-    // If we didn't find any shelves, return defaults
+    // If we didn't find any exclusive shelves, throw an error
     if (shelves.length === 0) {
-      logger.warn('No shelves found in paginatedShelfList, using defaults');
-      return [
-        { slug: 'read', count: 0 },
-        { slug: 'currently-reading', count: 0 },
-        { slug: 'to-read', count: 0 },
-      ];
+      const errorMsg = 'No exclusive reading status shelves found before horizontal divider';
+      logger.error(errorMsg);
+      throw new ScrapingError(errorMsg);
     }
 
-    logger.debug(`Found ${shelves.length} exclusive shelves`);
+    logger.info(`Found ${shelves.length} exclusive shelves`, {
+      shelves: shelves.map(s => s.slug)
+    });
     return shelves;
   }
 
