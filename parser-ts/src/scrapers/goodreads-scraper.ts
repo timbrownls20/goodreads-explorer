@@ -251,7 +251,14 @@ export class GoodreadsScraper {
     });
 
     // Extract date added
-    const dateAddedText = $row.find('.date_added, .field.date_added').first().text().trim();
+    const dateAddedRaw = $row.find('.date_added, .field.date_added').first().text().trim();
+
+    // Clean up the date text - remove "date added" prefix and extra whitespace
+    const dateAddedText = dateAddedRaw
+      .replace(/^date added\s*/i, '')  // Remove "date added" prefix (case insensitive)
+      .replace(/\s+/g, ' ')             // Replace multiple whitespace with single space
+      .trim();
+
     const dateAdded = dateAddedText || null;
 
     // Extract review (if any)
@@ -270,7 +277,18 @@ export class GoodreadsScraper {
 
     // Extract read dates
     const readRecords: ReadRecord[] = [];
-    const dateReadText = $row.find('.date_read, .field.date_read').first().text().trim();
+    const dateReadRaw = $row.find('.date_read, .field.date_read').first().text().trim();
+
+    // Clean up the date text - remove "date read" prefix and extra whitespace
+    let dateReadText = dateReadRaw
+      .replace(/^date read\s*/i, '')  // Remove "date read" prefix (case insensitive)
+      .replace(/\s+/g, ' ')            // Replace multiple whitespace with single space
+      .trim();
+
+    // If it's empty after cleaning, set to null
+    if (!dateReadText) {
+      dateReadText = '';
+    }
 
     if (dateReadText) {
       readRecords.push(
