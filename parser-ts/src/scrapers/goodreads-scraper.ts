@@ -19,6 +19,52 @@ import { logger } from '../utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
+/**
+ * Clean scraped text by removing extra whitespace and common placeholder text
+ */
+function cleanScrapedText(text: string | undefined | null): string | null {
+  if (!text) return null;
+
+  // Trim and normalize whitespace
+  let cleaned = text
+    .replace(/\s+/g, ' ')  // Replace multiple whitespace with single space
+    .trim();
+
+  // Return null for common empty/placeholder values
+  if (!cleaned ||
+      cleaned.toLowerCase() === 'none' ||
+      cleaned.toLowerCase() === 'null' ||
+      cleaned.toLowerCase() === 'n/a' ||
+      cleaned === '-') {
+    return null;
+  }
+
+  return cleaned;
+}
+
+/**
+ * Clean date text by removing common prefixes
+ */
+function cleanDateText(text: string | undefined | null, prefix: string): string | null {
+  if (!text) return null;
+
+  const cleaned = text
+    .replace(new RegExp(`^${prefix}\\s*`, 'i'), '')  // Remove prefix (case insensitive)
+    .replace(/\s+/g, ' ')                             // Replace multiple whitespace
+    .trim();
+
+  // Return null for common empty/placeholder values
+  if (!cleaned ||
+      cleaned.toLowerCase() === 'none' ||
+      cleaned.toLowerCase() === 'null' ||
+      cleaned.toLowerCase() === 'n/a' ||
+      cleaned === '-') {
+    return null;
+  }
+
+  return cleaned;
+}
+
 export interface ScraperOptions {
   rateLimitDelay?: number; // ms between requests (default 1000)
   maxRetries?: number; // max retry attempts (default 3)
@@ -215,7 +261,7 @@ export class GoodreadsScraper {
   ): Promise<UserBookRelation | null> {
     // Extract basic info from table row
     const titleElement = $row.find('.title a, .field.title a').first();
-    const title = titleElement.text().trim();
+    const title = cleanScrapedText(titleElement.text());
     const bookUrl = titleElement.attr('href');
 
     if (!title || !bookUrl) {
@@ -227,7 +273,7 @@ export class GoodreadsScraper {
       : `https://www.goodreads.com${bookUrl}`;
 
     // Extract author
-    const author = $row.find('.author a, .field.author a').first().text().trim();
+    const author = cleanScrapedText($row.find('.author a, .field.author a').first().text()) || '';
 
     // Extract rating
     const ratingText = $row.find('.rating .staticStars, .field.rating .staticStars').first().attr('title');
@@ -238,7 +284,7 @@ export class GoodreadsScraper {
     const shelfElements = $row.find('.shelf a, .field.shelf a');
     const shelves: Shelf[] = [];
     shelfElements.each((_, el) => {
-      const shelfName = $(el).text().trim();
+      const shelfName = cleanScrapedText($(el).text());
       if (shelfName) {
         shelves.push(
           new Shelf({
@@ -251,44 +297,26 @@ export class GoodreadsScraper {
     });
 
     // Extract date added
-    const dateAddedRaw = $row.find('.date_added, .field.date_added').first().text().trim();
-
-    // Clean up the date text - remove "date added" prefix and extra whitespace
-    const dateAddedText = dateAddedRaw
-      .replace(/^date added\s*/i, '')  // Remove "date added" prefix (case insensitive)
-      .replace(/\s+/g, ' ')             // Replace multiple whitespace with single space
-      .trim();
-
-    const dateAdded = dateAddedText || null;
+    const dateAddedRaw = $row.find('.date_added, .field.date_added').first().text();
+    const dateAdded = cleanDateText(dateAddedRaw, 'date added');
 
     // Extract review (if any)
     let review: Review | null = null;
-    const reviewElement = $row.find('.review_text, .field.review');
-    if (reviewElement.length > 0) {
-      const reviewText = reviewElement.text().trim();
-      if (reviewText) {
-        review = new Review({
-          reviewText,
-          reviewDate: null,
-          likesCount: null,
-        });
-      }
+    const reviewRaw = $row.find('.review_text, .field.review').first().text();
+    const reviewText = cleanDateText(reviewRaw, 'review');  // Remove "review" prefix
+
+    if (reviewText) {
+      review = new Review({
+        reviewText,
+        reviewDate: null,
+        likesCount: null,
+      });
     }
 
     // Extract read dates
     const readRecords: ReadRecord[] = [];
-    const dateReadRaw = $row.find('.date_read, .field.date_read').first().text().trim();
-
-    // Clean up the date text - remove "date read" prefix and extra whitespace
-    let dateReadText = dateReadRaw
-      .replace(/^date read\s*/i, '')  // Remove "date read" prefix (case insensitive)
-      .replace(/\s+/g, ' ')            // Replace multiple whitespace with single space
-      .trim();
-
-    // If it's empty after cleaning, set to null
-    if (!dateReadText) {
-      dateReadText = '';
-    }
+    const dateReadRaw = $row.find('.date_read, .field.date_read').first().text();
+    const dateReadText = cleanDateText(dateReadRaw, 'date read');
 
     if (dateReadText) {
       readRecords.push(
