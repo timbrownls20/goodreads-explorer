@@ -168,6 +168,13 @@ export class GoodreadsScraper {
     // Extract exclusive reading status shelves from sidebar
     const exclusiveShelves = LibraryParser.parseReadingStatusShelves(initialHtml);
 
+    // Debug: Save HTML to file for inspection
+    if (process.env.DEBUG_HTML) {
+      const debugPath = '/tmp/goodreads-library-page.html';
+      fs.writeFileSync(debugPath, initialHtml, 'utf-8');
+      logger.debug(`Saved library page HTML to ${debugPath} for debugging`);
+    }
+
     logger.info('Found exclusive shelves', {
       count: exclusiveShelves.length,
       shelves: exclusiveShelves.map(s => `${s.slug} (${s.count})`)

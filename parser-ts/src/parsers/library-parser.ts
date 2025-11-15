@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import { ScrapingError } from '../exceptions/parser-exceptions';
 import { Shelf } from '../models/shelf.model';
+import { logger } from '../utils/logger';
 
 export interface LibraryPageResult {
   userId: string | null;
@@ -134,11 +135,34 @@ export class LibraryParser {
     const $ = cheerio.load(html);
     const shelves: Array<{ slug: string; count: number }> = [];
 
-    // Find the paginated shelf list container
-    const shelfListContainer = $('.paginatedShelfList, #paginatedShelfList');
+    // Try multiple selectors for the shelf list container
+    let shelfListContainer = $('.paginatedShelfList');
 
     if (shelfListContainer.length === 0) {
-      // Fallback: return default shelves if container not found
+      shelfListContainer = $('#paginatedShelfList');
+    }
+
+    if (shelfListContainer.length === 0) {
+      // Try finding by id attribute pattern
+      shelfListContainer = $('[id*="ShelfList"], [class*="ShelfList"]');
+    }
+
+    if (shelfListContainer.length === 0) {
+      logger.warn('Could not find shelf list container, trying alternative approach');
+
+      // Alternative: Find all divs with "Bookshelves" header and get the next container
+      const bookshelvesHeader = $(':contains("Bookshelves")').filter(function() {
+        return $(this).text().trim().startsWith('Bookshelves');
+      }).first();
+
+      if (bookshelvesHeader.length > 0) {
+        shelfListContainer = bookshelvesHeader.next('div');
+        logger.debug('Found shelf container via Bookshelves header');
+      }
+    }
+
+    if (shelfListContainer.length === 0) {
+      logger.warn('Could not find shelf list container at all, using defaults');
       return [
         { slug: 'read', count: 0 },
         { slug: 'currently-reading', count: 0 },
@@ -146,44 +170,47 @@ export class LibraryParser {
       ];
     }
 
-    // Iterate through children, stopping at horizontal divider
+    // Iterate through direct children only, stopping at horizontal divider
     shelfListContainer.children().each((_, elem) => {
       const $elem = $(elem);
 
-      // Stop at horizontal divider (separates exclusive from custom shelves)
+      // Stop at horizontal divider
       if ($elem.hasClass('horizontalGreyDivider')) {
+        logger.debug('Found horizontal divider, stopping shelf extraction');
         return false; // Break out of .each()
       }
 
-      // Look for userShelf divs (exclusive reading status shelves)
-      if ($elem.hasClass('userShelf')) {
-        const link = $elem.find('a').first();
-        const href = link.attr('href');
-
-        if (href) {
-          // Extract shelf slug from URL (e.g., ?shelf=read)
-          const match = href.match(/[?&]shelf=([^&]+)/);
-          if (match && match[1]) {
-            const slug = match[1];
-
-            // Skip "all" shelf
-            if (slug === 'all') {
-              return; // Continue to next iteration
-            }
-
-            // Extract count from greyText
-            const countText = $elem.find('.greyText').text().trim();
-            const countMatch = countText.match(/\((\d+)\)/);
-            const count = countMatch ? parseInt(countMatch[1], 10) : 0;
-
-            shelves.push({ slug, count });
-          }
-        }
+      // Look for shelf links within this element
+      const $link = $elem.find('a[href*="shelf="]').first();
+      if ($link.length === 0) {
+        return; // No link, continue to next
       }
+
+      const href = $link.attr('href');
+      if (!href) return;
+
+      // Extract shelf slug from URL (e.g., ?shelf=read)
+      const match = href.match(/[?&]shelf=([^&]+)/);
+      if (!match || !match[1]) return;
+
+      const slug = match[1];
+
+      // Skip "all" shelf
+      if (slug === 'all') {
+        return; // Continue to next iteration
+      }
+
+      // Extract count - look for number in parentheses
+      const elemText = $elem.text();
+      const countMatch = elemText.match(/\((\d+)\)/);
+      const count = countMatch ? parseInt(countMatch[1], 10) : 0;
+
+      shelves.push({ slug, count });
     });
 
     // If we didn't find any shelves, return defaults
     if (shelves.length === 0) {
+      logger.warn('No shelves found in paginatedShelfList, using defaults');
       return [
         { slug: 'read', count: 0 },
         { slug: 'currently-reading', count: 0 },
@@ -191,6 +218,7 @@ export class LibraryParser {
       ];
     }
 
+    logger.debug(`Found ${shelves.length} exclusive shelves`);
     return shelves;
   }
 
