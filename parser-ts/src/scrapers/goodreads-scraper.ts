@@ -126,32 +126,31 @@ export class GoodreadsScraper {
 
     logger.info('Profile validated', { userId, username });
 
-    // Scrape all reading status shelves
-    const userBooks: UserBookRelation[] = [];
-    const readingStatuses: ReadingStatus[] = [
-      ReadingStatus.READ,
-      ReadingStatus.CURRENTLY_READING,
-      ReadingStatus.TO_READ,
-    ];
+    // Extract exclusive reading status shelves from sidebar
+    const exclusiveShelves = LibraryParser.parseReadingStatusShelves(initialHtml);
 
-    for (const status of readingStatuses) {
+    logger.info('Found exclusive shelves', {
+      count: exclusiveShelves.length,
+      shelves: exclusiveShelves.map(s => `${s.slug} (${s.count})`)
+    });
+
+    // Scrape all exclusive reading status shelves
+    const userBooks: UserBookRelation[] = [];
+
+    for (const { slug, count } of exclusiveShelves) {
+      const status = this.mapShelfSlugToReadingStatus(slug);
+
       const booksForStatus = await this.scrapeBooksForShelf(
         normalizedUrl,
         userId,
         status,
-        username
+        username,
+        slug
       );
       userBooks.push(...booksForStatus);
-
-      if (this.options.limit && userBooks.length >= this.options.limit) {
-        break;
-      }
     }
 
-    // Trim to limit if specified
-    const finalUserBooks = this.options.limit
-      ? userBooks.slice(0, this.options.limit)
-      : userBooks;
+    const finalUserBooks = userBooks;
 
     const library = new Library({
       userId,
@@ -172,25 +171,50 @@ export class GoodreadsScraper {
   }
 
   /**
+   * Map shelf slug to ReadingStatus enum
+   */
+  private mapShelfSlugToReadingStatus(slug: string): ReadingStatus {
+    // Normalize common variations
+    const normalized = slug.toLowerCase().replace(/_/g, '-');
+
+    switch (normalized) {
+      case 'read':
+        return ReadingStatus.READ;
+      case 'currently-reading':
+      case 'currentlyreading':
+        return ReadingStatus.CURRENTLY_READING;
+      case 'to-read':
+      case 'toread':
+        return ReadingStatus.TO_READ;
+      default:
+        // For any other exclusive shelf, default to READ
+        // (user might have custom exclusive shelves)
+        return ReadingStatus.READ;
+    }
+  }
+
+  /**
    * Scrape books for a specific shelf/status
    */
   private async scrapeBooksForShelf(
     profileUrl: string,
     userId: string,
     status: ReadingStatus,
-    username: string
+    username: string,
+    shelfSlug?: string
   ): Promise<UserBookRelation[]> {
     const userBooks: UserBookRelation[] = [];
     let page = 1;
     let hasNextPage = true;
 
-    logger.info(`Scraping shelf: ${status}`);
+    const effectiveShelf = shelfSlug || status;
+    logger.info(`Scraping shelf: ${effectiveShelf}`);
 
     while (hasNextPage) {
       const shelfUrl = PaginationHelper.buildLibraryUrl(
         profileUrl,
         page,
-        status,
+        effectiveShelf,
         this.options.sort
       );
 
@@ -201,15 +225,26 @@ export class GoodreadsScraper {
 
       // Parse books from table
       const books = await this.extractBooksFromPage($, status, username);
-      userBooks.push(...books);
+
+      // Apply limit - only add books up to the limit
+      if (this.options.limit) {
+        const remainingSlots = this.options.limit - userBooks.length;
+        const booksToAdd = books.slice(0, remainingSlots);
+        userBooks.push(...booksToAdd);
+
+        // Stop if we've reached the limit
+        if (userBooks.length >= this.options.limit) {
+          hasNextPage = false;
+        }
+      } else {
+        userBooks.push(...books);
+      }
 
       this.options.progressCallback(userBooks.length, 0);
 
       // Check for next page
-      hasNextPage = PaginationHelper.detectPagination(html);
-
-      if (this.options.limit && userBooks.length >= this.options.limit) {
-        hasNextPage = false;
+      if (hasNextPage) {
+        hasNextPage = PaginationHelper.detectPagination(html);
       }
 
       page++;

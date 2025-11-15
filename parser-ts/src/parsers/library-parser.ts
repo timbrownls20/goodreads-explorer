@@ -126,41 +126,69 @@ export class LibraryParser {
   }
 
   /**
-   * Parse reading status shelves from HTML
+   * Parse exclusive reading status shelves from HTML sidebar
+   * Extracts shelves that appear BEFORE the horizontal divider
+   * (matching Python parser logic)
    */
-  static parseReadingStatusShelves(html: string): Shelf[] {
+  static parseReadingStatusShelves(html: string): Array<{ slug: string; count: number }> {
     const $ = cheerio.load(html);
-    const shelves: Shelf[] = [];
+    const shelves: Array<{ slug: string; count: number }> = [];
 
-    // Standard reading status shelves
-    const builtinShelves = [
-      { name: 'read', isBuiltin: true },
-      { name: 'currently-reading', isBuiltin: true },
-      { name: 'to-read', isBuiltin: true },
-    ];
+    // Find the paginated shelf list container
+    const shelfListContainer = $('.paginatedShelfList, #paginatedShelfList');
 
-    // Try to extract shelf counts from the page
-    $('.shelfStat').each((_, element) => {
-      const shelfLink = $(element).find('a');
-      const shelfName = shelfLink.text().trim().toLowerCase();
-      const countText = $(element).find('.greyText').text().trim();
-      const count = parseInt(countText.replace(/[()]/g, ''), 10);
+    if (shelfListContainer.length === 0) {
+      // Fallback: return default shelves if container not found
+      return [
+        { slug: 'read', count: 0 },
+        { slug: 'currently-reading', count: 0 },
+        { slug: 'to-read', count: 0 },
+      ];
+    }
 
-      const existingIndex = builtinShelves.findIndex(s => s.name === shelfName);
-      if (existingIndex >= 0) {
-        shelves.push({
-          name: builtinShelves[existingIndex].name,
-          isBuiltin: true,
-          bookCount: isNaN(count) ? null : count,
-        });
+    // Iterate through children, stopping at horizontal divider
+    shelfListContainer.children().each((_, elem) => {
+      const $elem = $(elem);
+
+      // Stop at horizontal divider (separates exclusive from custom shelves)
+      if ($elem.hasClass('horizontalGreyDivider')) {
+        return false; // Break out of .each()
+      }
+
+      // Look for userShelf divs (exclusive reading status shelves)
+      if ($elem.hasClass('userShelf')) {
+        const link = $elem.find('a').first();
+        const href = link.attr('href');
+
+        if (href) {
+          // Extract shelf slug from URL (e.g., ?shelf=read)
+          const match = href.match(/[?&]shelf=([^&]+)/);
+          if (match && match[1]) {
+            const slug = match[1];
+
+            // Skip "all" shelf
+            if (slug === 'all') {
+              return; // Continue to next iteration
+            }
+
+            // Extract count from greyText
+            const countText = $elem.find('.greyText').text().trim();
+            const countMatch = countText.match(/\((\d+)\)/);
+            const count = countMatch ? parseInt(countMatch[1], 10) : 0;
+
+            shelves.push({ slug, count });
+          }
+        }
       }
     });
 
-    // Add any missing builtin shelves
-    for (const shelf of builtinShelves) {
-      if (!shelves.find(s => s.name === shelf.name)) {
-        shelves.push(new Shelf({ ...shelf, bookCount: null }));
-      }
+    // If we didn't find any shelves, return defaults
+    if (shelves.length === 0) {
+      return [
+        { slug: 'read', count: 0 },
+        { slug: 'currently-reading', count: 0 },
+        { slug: 'to-read', count: 0 },
+      ];
     }
 
     return shelves;
