@@ -21,7 +21,9 @@ program
   .option('--rate-limit <ms>', 'Delay between requests in milliseconds', '1000')
   .option('--max-retries <count>', 'Maximum retry attempts', '3')
   .option('--timeout <ms>', 'Request timeout in milliseconds', '30000')
-  .option('--limit <count>', 'Maximum number of books to scrape')
+  .option('--limit <count>', 'Maximum number of books to scrape per shelf')
+  .option('--shelf <name>', 'Scrape only a specific exclusive shelf (e.g., read, to-read, currently-reading)')
+  .option('--title <search>', 'Filter books by title (case-insensitive substring match)')
   .option('--sort-by <field>', 'Sort order (date-read, date-added, title, author, rating)')
   .option('--no-progress', 'Disable progress reporting')
   .action(async (url: string, options: any) => {
@@ -30,6 +32,8 @@ program
       const maxRetries = parseInt(options.maxRetries, 10);
       const timeout = parseInt(options.timeout, 10);
       const limit = options.limit ? parseInt(options.limit, 10) : undefined;
+      const shelfFilter = options.shelf || undefined;
+      const titleFilter = options.title || undefined;
 
       logger.info('Starting scrape', {
         url,
@@ -38,6 +42,8 @@ program
         maxRetries,
         timeout,
         limit,
+        shelfFilter,
+        titleFilter,
       });
 
       let bookCount = 0;
@@ -47,6 +53,8 @@ program
         maxRetries,
         timeout,
         limit,
+        shelfFilter,
+        titleFilter,
         sort: options.sortBy || null,
         progressCallback: options.progress
           ? (current: number) => {

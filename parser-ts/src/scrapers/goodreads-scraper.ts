@@ -108,7 +108,9 @@ export interface ScraperOptions {
   rateLimitDelay?: number; // ms between requests (default 1000)
   maxRetries?: number; // max retry attempts (default 3)
   timeout?: number; // request timeout in ms (default 30000)
-  limit?: number; // max books to scrape (default null = all)
+  limit?: number; // max books to scrape per shelf (default null = all)
+  shelfFilter?: string; // scrape only a specific exclusive shelf (e.g., read, to-read)
+  titleFilter?: string; // filter books by title (case-insensitive substring match)
   sort?: string | null; // sort order (default null)
   outputDir?: string; // output directory for individual books
   progressCallback?: (current: number, total: number) => void;
@@ -124,6 +126,8 @@ export class GoodreadsScraper {
       maxRetries: options.maxRetries ?? 3,
       timeout: options.timeout ?? 30000,
       limit: options.limit ?? 0,
+      shelfFilter: options.shelfFilter ?? '',
+      titleFilter: options.titleFilter ?? '',
       sort: options.sort ?? null,
       outputDir: options.outputDir ?? './output',
       progressCallback: options.progressCallback ?? (() => {}),
@@ -154,7 +158,13 @@ export class GoodreadsScraper {
     // This page has the proper shelf structure with horizontal divider
     const reviewListUrl = `https://www.goodreads.com/review/list/${userId}`;
 
-    logger.info('Starting library scrape', { userId, profileUrl: normalizedUrl, reviewListUrl });
+    logger.info('Starting library scrape', {
+      userId,
+      profileUrl: normalizedUrl,
+      reviewListUrl,
+      shelfFilter: this.options.shelfFilter || 'all exclusive shelves',
+      titleFilter: this.options.titleFilter || 'none'
+    });
 
     // Fetch the review list page (My Books page) for parsing
     const reviewListHtml = await this.fetchWithRetry(reviewListUrl);
@@ -184,10 +194,27 @@ export class GoodreadsScraper {
       shelves: exclusiveShelves.map(s => `${s.slug} (${s.count})`)
     });
 
-    // Scrape all exclusive reading status shelves
+    // Apply shelf filter if specified
+    let shelvesToScrape = exclusiveShelves;
+    if (this.options.shelfFilter && this.options.shelfFilter.trim() !== '') {
+      const filterLower = this.options.shelfFilter.toLowerCase().trim();
+      shelvesToScrape = exclusiveShelves.filter(s => s.slug.toLowerCase() === filterLower);
+
+      if (shelvesToScrape.length === 0) {
+        const availableShelves = exclusiveShelves.map(s => s.slug).join(', ');
+        throw new ScrapingError(
+          `Specified shelf "${this.options.shelfFilter}" not found in exclusive shelves. ` +
+          `Available exclusive shelves: ${availableShelves}`
+        );
+      }
+
+      logger.info(`Filtering to shelf: ${shelvesToScrape[0].slug} (${shelvesToScrape[0].count} books)`);
+    }
+
+    // Scrape the selected exclusive reading status shelf(s)
     const userBooks: UserBookRelation[] = [];
 
-    for (const { slug, count } of exclusiveShelves) {
+    for (const { slug, count } of shelvesToScrape) {
       const status = this.mapShelfSlugToReadingStatus(slug);
 
       const booksForStatus = await this.scrapeBooksForShelf(
@@ -351,6 +378,17 @@ export class GoodreadsScraper {
 
     if (!title || !bookUrl) {
       return null;
+    }
+
+    // Apply title filter if specified
+    if (this.options.titleFilter && this.options.titleFilter.trim() !== '') {
+      const titleLower = title.toLowerCase();
+      const filterLower = this.options.titleFilter.toLowerCase();
+      if (!titleLower.includes(filterLower)) {
+        logger.debug(`Skipping book (title filter): ${title}`);
+        return null;
+      }
+      logger.debug(`Matched title filter: ${title}`);
     }
 
     const fullBookUrl = bookUrl.startsWith('http')
