@@ -79,8 +79,8 @@ export class Book extends Model {
   @Column({ type: DataType.DATEONLY, allowNull: true })
   publicationDate: Date | null;
 
-  @Column({ type: DataType.STRING(500), allowNull: true })
-  setting: string | null;
+  @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: true })
+  setting: string[] | null;
 
   // Literary Awards: many-to-many relationship (normalized)
   @BelongsToMany(() => LiteraryAward, () => BookLiteraryAward)

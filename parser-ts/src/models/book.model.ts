@@ -60,8 +60,9 @@ export class Book {
   language?: string | null;
 
   @IsOptional()
-  @IsString()
-  setting?: string | null;
+  @IsArray()
+  @IsString({ each: true })
+  setting?: string[];
 
   @IsOptional()
   @IsArray()

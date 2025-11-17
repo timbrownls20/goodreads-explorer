@@ -88,12 +88,14 @@ export class CreateBookDto {
   publicationDate?: string | null;
 
   @ApiPropertyOptional({
-    description: 'Book setting/location',
-    example: 'Mariabronn',
+    description: 'Book setting/locations (multiple locations possible)',
+    type: [String],
+    example: ['England', 'London, England', 'Oxford, Oxfordshire, England'],
   })
   @IsOptional()
-  @IsString()
-  setting?: string | null;
+  @IsArray()
+  @IsString({ each: true })
+  setting?: string[];
 
   @ApiPropertyOptional({
     description: 'Literary awards',

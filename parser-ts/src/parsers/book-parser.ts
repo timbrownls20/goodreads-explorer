@@ -23,7 +23,7 @@ export class BookParser {
     const publisher = nextData.publisher || this.extractPublisher($);
     const pageCount = nextData.pageCount || this.extractPageCount($);
     const language = nextData.language || this.extractLanguage($);
-    const setting = nextData.setting || this.extractSetting($);
+    const setting = nextData.setting.length > 0 ? nextData.setting : this.extractSetting($);
     const literaryAwards = nextData.literaryAwards.length > 0 ? nextData.literaryAwards : this.extractLiteraryAwards($);
     const genres = this.extractGenres($);
     const averageRating = nextData.averageRating || this.extractAverageRating($);
@@ -64,7 +64,7 @@ export class BookParser {
     publisher: string | null;
     pageCount: number | null;
     language: string | null;
-    setting: string | null;
+    setting: string[];
     literaryAwards: LiteraryAward[];
     averageRating: number | null;
     ratingsCount: number | null;
@@ -79,7 +79,7 @@ export class BookParser {
       publisher: null,
       pageCount: null,
       language: null,
-      setting: null,
+      setting: [],
       literaryAwards: [],
       averageRating: null,
       ratingsCount: null,
@@ -170,9 +170,16 @@ export class BookParser {
           const details = workData.details;
 
           if (details) {
-            // Setting - extract from places array
-            if (details.places?.length > 0 && details.places[0]?.name) {
-              result.setting = String(details.places[0].name).trim().substring(0, 200);
+            // Setting - extract all from places array
+            if (details.places && Array.isArray(details.places)) {
+              for (const place of details.places) {
+                if (place?.name) {
+                  const settingName = String(place.name).trim().substring(0, 200);
+                  if (settingName) {
+                    result.setting.push(settingName);
+                  }
+                }
+              }
             }
 
             // Literary Awards - extract from awardsWon array
@@ -334,10 +341,18 @@ export class BookParser {
     return text || null;
   }
 
-  private static extractSetting($: cheerio.CheerioAPI): string | null {
+  private static extractSetting($: cheerio.CheerioAPI): string[] {
+    const settings: string[] = [];
+
     // Settings are less standardized, try to find them
     const settingText = $('.infoBoxRowItem:contains("Setting")').next().text().trim();
-    return settingText || null;
+    if (settingText) {
+      // Split by common delimiters (comma, semicolon)
+      const settingParts = settingText.split(/[,;]/).map(s => s.trim()).filter(s => s.length > 0);
+      settings.push(...settingParts);
+    }
+
+    return settings;
   }
 
   private static extractLiteraryAwards($: cheerio.CheerioAPI): LiteraryAward[] {
