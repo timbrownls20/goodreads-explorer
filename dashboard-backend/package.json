@@ -25,8 +25,7 @@
     "db:sync": "ts-node -r tsconfig-paths/register src/cli/sync-database.ts",
     "library:load": "ts-node -r tsconfig-paths/register src/cli/reload-library.ts",
     "library:load:sample": "ts-node -r tsconfig-paths/register src/cli/reload-library.ts /Users/timbrown/Development/goodreads-explorer/parser/tim-brown_library",
-    "db:clear": "ts-node -r tsconfig-paths/register src/cli/clear-database.ts",
-    "scrape": "ts-node -r tsconfig-paths/register src/cli/scrape-library.ts"
+    "db:clear": "ts-node -r tsconfig-paths/register src/cli/clear-database.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

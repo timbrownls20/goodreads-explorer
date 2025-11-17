@@ -74,6 +74,9 @@ program
 
       console.log(`\nSuccessfully scraped ${library.totalBooks} books from ${library.username}`);
       console.log(`Files saved to: ${path.resolve(options.outputDir, `${library.username}_library`)}/`);
+
+      // Exit cleanly to prevent hanging due to axios keep-alive connections
+      process.exit(0);
     } catch (error) {
       logger.error('Scrape failed', {
         error: error instanceof Error ? error.message : 'Unknown error',
