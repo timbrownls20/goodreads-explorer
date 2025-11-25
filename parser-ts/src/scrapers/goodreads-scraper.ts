@@ -104,6 +104,72 @@ function parseGoodreadsDate(dateStr: string | null): string | null {
   }
 }
 
+/**
+ * Parse reading timeline from review page HTML
+ * Extracts multiple read records (started/finished dates) from the timeline
+ *
+ * Rules:
+ * - A "Finished Reading" without a date or corresponding "Started Reading" = read with null start/end
+ * - Match "Started Reading" with subsequent "Finished Reading" to form read records
+ */
+function parseReadingTimeline(html: string): ReadRecord[] {
+  const $ = cheerio.load(html);
+  const records: ReadRecord[] = [];
+
+  // Extract all timeline rows
+  const timelineRows = $('.readingTimeline__row').toArray();
+
+  interface TimelineEvent {
+    type: 'started' | 'finished';
+    date: string | null;
+  }
+
+  const events: TimelineEvent[] = [];
+
+  for (const row of timelineRows) {
+    const text = $(row).find('.readingTimeline__text').text().trim();
+
+    // Check for "Started Reading" or "Finished Reading"
+    if (text.includes('Started Reading')) {
+      // Extract date if present
+      const dateMatch = text.match(/([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/);
+      events.push({
+        type: 'started',
+        date: dateMatch ? parseGoodreadsDate(dateMatch[1]) : null
+      });
+    } else if (text.includes('Finished Reading')) {
+      // Check if there's a date or "Add a date" link
+      const hasAddDateLink = $(row).find('.add_date_link').length > 0;
+      const dateMatch = text.match(/([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/);
+
+      events.push({
+        type: 'finished',
+        date: hasAddDateLink || !dateMatch ? null : parseGoodreadsDate(dateMatch[1])
+      });
+    }
+  }
+
+  // Process events to create read records
+  // Strategy: pair "started" events with subsequent "finished" events
+  // A standalone "finished" without a matching "started" = read with null dates
+
+  let currentStarted: string | null = null;
+
+  for (const event of events) {
+    if (event.type === 'started') {
+      currentStarted = event.date;
+    } else if (event.type === 'finished') {
+      records.push(new ReadRecord({
+        dateStarted: currentStarted,
+        dateFinished: event.date
+      }));
+      currentStarted = null; // Reset after pairing
+    }
+  }
+
+  return records;
+}
+
 export interface ScraperOptions {
   rateLimitDelay?: number; // ms between requests (default 1000)
   maxRetries?: number; // max retry attempts (default 3)
@@ -380,6 +446,18 @@ export class GoodreadsScraper {
       return null;
     }
 
+    // Extract review URL from "view" link or actions column
+    let goodreadsViewUrl: string | null = null;
+    const viewLink = $row.find('a[href*="/review/show/"]').first();
+    if (viewLink.length) {
+      const reviewHref = viewLink.attr('href');
+      if (reviewHref) {
+        goodreadsViewUrl = reviewHref.startsWith('http')
+          ? reviewHref
+          : `https://www.goodreads.com${reviewHref}`;
+      }
+    }
+
     // Apply title filter if specified
     if (this.options.titleFilter && this.options.titleFilter.trim() !== '') {
       const titleLower = title.toLowerCase();
@@ -437,33 +515,51 @@ export class GoodreadsScraper {
       });
     }
 
-    // Extract read dates
-    const readRecords: ReadRecord[] = [];
-    const dateReadRaw = $row.find('.date_read, .field.date_read').first().text();
-    const dateReadCleaned = cleanDateText(dateReadRaw, 'date read');
-    const dateReadText = parseGoodreadsDate(dateReadCleaned);
-
-    if (dateReadText) {
-      readRecords.push(
-        new ReadRecord({
-          dateStarted: null,
-          dateFinished: dateReadText || null,
-        })
-      );
-    } else if (status === ReadingStatus.READ) {
-      // Even if no dates, create a read record for read books
-      readRecords.push(
-        new ReadRecord({
-          dateStarted: null,
-          dateFinished: null,
-        })
-      );
-    }
-
     // Fetch book page to get complete metadata
     logger.debug('Fetching book page', { bookUrl: fullBookUrl });
     const bookHtml = await this.fetchWithRetry(fullBookUrl);
     const bookData = BookParser.parseBookPage(bookHtml, fullBookUrl);
+
+    // Extract read dates - fetch review page if available to get complete timeline
+    let readRecords: ReadRecord[] = [];
+
+    if (goodreadsViewUrl) {
+      // Fetch review page to parse reading timeline (for multiple reads)
+      logger.debug('Fetching review page for timeline', { reviewUrl: goodreadsViewUrl });
+      try {
+        const reviewHtml = await this.fetchWithRetry(goodreadsViewUrl);
+        readRecords = parseReadingTimeline(reviewHtml);
+      } catch (error) {
+        logger.warn('Failed to fetch review page, falling back to table data', {
+          reviewUrl: goodreadsViewUrl,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    // Fallback: if no review URL or timeline parsing failed, use table row data
+    if (readRecords.length === 0) {
+      const dateReadRaw = $row.find('.date_read, .field.date_read').first().text();
+      const dateReadCleaned = cleanDateText(dateReadRaw, 'date read');
+      const dateReadText = parseGoodreadsDate(dateReadCleaned);
+
+      if (dateReadText) {
+        readRecords.push(
+          new ReadRecord({
+            dateStarted: null,
+            dateFinished: dateReadText || null,
+          })
+        );
+      } else if (status === ReadingStatus.READ) {
+        // Even if no dates, create a read record for read books
+        readRecords.push(
+          new ReadRecord({
+            dateStarted: null,
+            dateFinished: null,
+          })
+        );
+      }
+    }
 
     // Create complete book object with all metadata
     const book = new Book({
@@ -497,6 +593,7 @@ export class GoodreadsScraper {
       review,
       dateAdded,
       readRecords,
+      goodreadsViewUrl,
     }, username);
 
     // Create user-book relation
@@ -508,6 +605,7 @@ export class GoodreadsScraper {
       review,
       dateAdded,
       readRecords,
+      goodreadsViewUrl,
     });
 
     return userBook;
@@ -525,6 +623,7 @@ export class GoodreadsScraper {
       review: Review | null;
       dateAdded: string | null;
       readRecords: ReadRecord[];
+      goodreadsViewUrl: string | null;
     },
     username: string
   ): Promise<void> {
@@ -579,6 +678,7 @@ export class GoodreadsScraper {
         date_started: rr.dateStarted,
         date_finished: rr.dateFinished,
       })),
+      goodreads_view_url: userData.goodreadsViewUrl,
       scraped_at: new Date().toISOString(),
       _metadata: {
         username,

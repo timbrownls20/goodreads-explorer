@@ -123,6 +123,14 @@ export class CreateBookDto {
   @IsString()
   goodreadsUrl?: string | null;
 
+  @ApiPropertyOptional({
+    description: 'Goodreads review view URL',
+    example: 'https://www.goodreads.com/review/show/6053404367',
+  })
+  @IsOptional()
+  @IsString()
+  goodreadsViewUrl?: string | null;
+
   // Categories
   @ApiPropertyOptional({
     description: 'Book genres',

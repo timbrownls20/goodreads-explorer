@@ -132,6 +132,7 @@ export class LibraryImportService {
             'setting',
             'coverImageUrl',
             'goodreadsUrl',
+            'goodreadsViewUrl',
             'dateAdded',
             'review',
             'reviewDate',

@@ -92,6 +92,9 @@ export class Book extends Model {
   @Column({ type: DataType.STRING(500), allowNull: true })
   goodreadsUrl: string | null;
 
+  @Column({ type: DataType.STRING(500), allowNull: true })
+  goodreadsViewUrl: string | null;
+
   // Categories & Organization
   // Genres: many-to-many relationship (normalized)
   @BelongsToMany(() => Genre, () => BookGenre)

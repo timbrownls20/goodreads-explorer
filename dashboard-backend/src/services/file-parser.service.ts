@@ -191,6 +191,7 @@ export class FileParserService {
       literaryAwards,
       coverImageUrl: book.cover_image_url || null,
       goodreadsUrl: book.goodreads_url || null,
+      goodreadsViewUrl: userBook.goodreads_view_url || null,
       genres: book.genres || [],
       shelves: shelfNames,
       dateAdded: userBook.date_added || null,

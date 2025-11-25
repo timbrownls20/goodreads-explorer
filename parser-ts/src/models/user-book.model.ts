@@ -74,6 +74,10 @@ export class UserBookRelation {
   @IsDateString()
   dateAdded?: string | null;
 
+  @IsOptional()
+  @IsString()
+  goodreadsViewUrl?: string | null;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ReadRecord)
