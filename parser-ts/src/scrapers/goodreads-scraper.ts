@@ -690,23 +690,12 @@ export class GoodreadsScraper {
       user_rating: userData.userRating,
       reading_status: userData.readingStatus,
       shelves: userData.shelves,
-      review: userData.review
-        ? {
-            review_text: userData.review.reviewText,
-            review_date: userData.review.reviewDate,
-            likes_count: userData.review.likesCount,
-          }
-        : null,
       date_added: userData.dateAdded,
       read_records: userData.readRecords.map(rr => ({
         date_started: rr.dateStarted,
         date_finished: rr.dateFinished,
       })),
       scraped_at: new Date().toISOString(),
-      _metadata: {
-        username,
-        exported_at: null,
-      },
     };
 
     fs.writeFileSync(filepath, JSON.stringify(data, null, 2), 'utf-8');

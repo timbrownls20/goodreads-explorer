@@ -84,13 +84,6 @@ export class JsonExporter {
       user_rating: userBook.userRating,
       reading_status: userBook.readingStatus,
       shelves: userBook.shelves,
-      review: userBook.review
-        ? {
-            review_text: userBook.review.reviewText,
-            review_date: userBook.review.reviewDate,
-            likes_count: userBook.review.likesCount,
-          }
-        : null,
       date_added: userBook.dateAdded,
       read_records: userBook.readRecords.map(rr => ({
         date_started: rr.dateStarted,
