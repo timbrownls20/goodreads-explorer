@@ -17,10 +17,10 @@
     "lint": "eslint \"src/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "scrape": "ts-node src/cli/scrape-library.ts",
-    "scrape:dev": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --limit 3",
+    "scrape:dev": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --limit 10",
     "scrape:title:dev": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --title Babel",
     "scrape:shelf:dev": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --shelf paused --limit 10",
-    "scrape:all": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --limit 3",
+    "scrape:all": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown",
     "prepublishOnly": "pnpm run clean && pnpm run build"
   },
   "keywords": [

@@ -38,7 +38,7 @@ export class Library {
 
   getBooksByShelf(shelfName: string): UserBookRelation[] {
     return this.userBooks.filter(ub =>
-      ub.shelves.some(shelf => shelf.name.toLowerCase() === shelfName.toLowerCase())
+      ub.shelves.some(shelf => shelf.toLowerCase() === shelfName.toLowerCase())
     );
   }
 

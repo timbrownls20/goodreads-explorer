@@ -83,11 +83,7 @@ export class JsonExporter {
       },
       user_rating: userBook.userRating,
       reading_status: userBook.readingStatus,
-      shelves: userBook.shelves.map(s => ({
-        name: s.name,
-        is_builtin: s.isBuiltin,
-        book_count: s.bookCount,
-      })),
+      shelves: userBook.shelves,
       review: userBook.review
         ? {
             review_text: userBook.review.reviewText,

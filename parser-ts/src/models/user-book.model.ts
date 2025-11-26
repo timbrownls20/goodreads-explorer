@@ -61,9 +61,8 @@ export class UserBookRelation {
   readingStatus: string;
 
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => Shelf)
-  shelves: Shelf[];
+  @IsString({ each: true })
+  shelves: string[];
 
   @IsOptional()
   @ValidateNested()

@@ -573,17 +573,18 @@ export class GoodreadsScraper {
     // - Use review page shelves if available (more complete)
     // - Otherwise use table row shelves (fallback)
     // - Filter out the exclusive shelf (which is the reading_status)
-    let finalShelves: Shelf[];
+    // - Convert to array of shelf names (strings)
+    let finalShelves: string[];
     if (reviewPageShelves.length > 0) {
       // Use review page shelves and filter out the exclusive shelf
-      finalShelves = reviewPageShelves.filter(
-        shelf => shelf.name.toLowerCase() !== shelfSlug.toLowerCase()
-      );
+      finalShelves = reviewPageShelves
+        .filter(shelf => shelf.name.toLowerCase() !== shelfSlug.toLowerCase())
+        .map(shelf => shelf.name);
     } else {
       // Fallback to table row shelves
-      finalShelves = tableRowShelves.filter(
-        shelf => shelf.name.toLowerCase() !== shelfSlug.toLowerCase()
-      );
+      finalShelves = tableRowShelves
+        .filter(shelf => shelf.name.toLowerCase() !== shelfSlug.toLowerCase())
+        .map(shelf => shelf.name);
     }
 
     // Create complete book object with all metadata
@@ -644,7 +645,7 @@ export class GoodreadsScraper {
     userData: {
       userRating: number | null;
       readingStatus: string;
-      shelves: Shelf[];
+      shelves: string[];
       review: Review | null;
       dateAdded: string | null;
       readRecords: ReadRecord[];
@@ -688,11 +689,7 @@ export class GoodreadsScraper {
       },
       user_rating: userData.userRating,
       reading_status: userData.readingStatus,
-      shelves: userData.shelves.map(s => ({
-        name: s.name,
-        is_builtin: s.isBuiltin,
-        book_count: s.bookCount,
-      })),
+      shelves: userData.shelves,
       review: userData.review
         ? {
             review_text: userData.review.reviewText,
