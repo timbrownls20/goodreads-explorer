@@ -353,6 +353,7 @@ export class GoodreadsScraper {
     const userBooks: UserBookRelation[] = [];
     let page = 1;
     let hasNextPage = true;
+    let totalProcessed = 0; // Track total books processed (scraped + skipped)
 
     const effectiveShelf = shelfSlug || status;
     logger.info(`Scraping shelf: ${effectiveShelf}`);
@@ -371,12 +372,15 @@ export class GoodreadsScraper {
       const $ = cheerio.load(html);
 
       // Parse books from table
-      const books = await this.extractBooksFromPage($, status, userId, username, effectiveShelf);
+      const result = await this.extractBooksFromPage($, status, userId, username, effectiveShelf);
+
+      // Track total processed (includes both scraped and skipped books)
+      totalProcessed += result.totalRows;
 
       // Apply limit - only add books up to the limit
       if (this.options.limit) {
         const remainingSlots = this.options.limit - userBooks.length;
-        const booksToAdd = books.slice(0, remainingSlots);
+        const booksToAdd = result.books.slice(0, remainingSlots);
         userBooks.push(...booksToAdd);
 
         // Stop if we've reached the limit
@@ -384,10 +388,10 @@ export class GoodreadsScraper {
           hasNextPage = false;
         }
       } else {
-        userBooks.push(...books);
+        userBooks.push(...result.books);
       }
 
-      this.options.progressCallback(userBooks.length, 0);
+      this.options.progressCallback(userBooks.length, totalProcessed);
 
       // Check for next page
       if (hasNextPage) {
@@ -398,13 +402,18 @@ export class GoodreadsScraper {
       await this.sleep(this.options.rateLimitDelay);
     }
 
-    logger.info(`Shelf scrape complete: ${status}`, { bookCount: userBooks.length });
+    logger.info(`Shelf scrape complete: ${effectiveShelf}`, {
+      scraped: userBooks.length,
+      totalProcessed,
+      skipped: totalProcessed - userBooks.length
+    });
 
     return userBooks;
   }
 
   /**
    * Extract books from a library page
+   * Returns object with books array and totalRows count (for resume tracking)
    */
   private async extractBooksFromPage(
     $: cheerio.CheerioAPI,
@@ -412,7 +421,7 @@ export class GoodreadsScraper {
     userId: string,
     username: string,
     shelfSlug: string
-  ): Promise<UserBookRelation[]> {
+  ): Promise<{ books: UserBookRelation[]; totalRows: number }> {
     const userBooks: UserBookRelation[] = [];
 
     // Find all book rows in the table
@@ -431,7 +440,7 @@ export class GoodreadsScraper {
       }
     }
 
-    return userBooks;
+    return { books: userBooks, totalRows: bookRows.length };
   }
 
   /**

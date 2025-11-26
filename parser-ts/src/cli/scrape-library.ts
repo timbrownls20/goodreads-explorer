@@ -60,10 +60,15 @@ program
         sort: options.sortBy || null,
         resume: options.resume || false,
         progressCallback: options.progress
-          ? (current: number) => {
-              bookCount = current;
-              if (current % 10 === 0) {
-                logger.info(`Progress: ${current} books scraped`);
+          ? (scraped: number, totalProcessed: number) => {
+              bookCount = scraped;
+              if (totalProcessed % 10 === 0 || scraped % 10 === 0) {
+                const skipped = totalProcessed - scraped;
+                if (options.resume && skipped > 0) {
+                  logger.info(`Progress: ${scraped} books scraped, ${skipped} skipped (${totalProcessed} total processed)`);
+                } else {
+                  logger.info(`Progress: ${scraped} books scraped`);
+                }
               }
             }
           : undefined,
