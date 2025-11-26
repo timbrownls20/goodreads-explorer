@@ -98,6 +98,7 @@ export class BookParser {
       if (!apolloState) return result;
 
       // Find Book object (key starts with "Book:")
+      // Note: There may be multiple Book objects; we need to find the one with details
       for (const [key, value] of Object.entries(apolloState)) {
         if (key.startsWith('Book:') && typeof value === 'object' && value !== null) {
           const bookData = value as any;
@@ -159,7 +160,8 @@ export class BookParser {
             result.author = String(bookData.primaryContributorEdge.node.name).trim();
           }
 
-          break; // Only process first Book object
+          // Continue checking other Book objects (don't break early)
+          // We want to find the Book object with the most complete details
         }
       }
 
