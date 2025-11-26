@@ -18,9 +18,12 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "scrape": "ts-node src/cli/scrape-library.ts",
     "scrape:dev": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --limit 10",
+    "scrape:dev:resume": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --limit 10 --resume",
     "scrape:title:dev": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --title Babel",
     "scrape:shelf:dev": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --shelf paused --limit 10",
+    "scrape:shelf:dev:resume": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --shelf paused --limit 10 --resume",
     "scrape:all": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown",
+    "scrape:all:resume": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --resume",
     "prepublishOnly": "pnpm run clean && pnpm run build"
   },
   "keywords": [

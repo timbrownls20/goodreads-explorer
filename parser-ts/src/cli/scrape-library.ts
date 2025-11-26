@@ -25,6 +25,7 @@ program
   .option('--shelf <name>', 'Scrape only a specific exclusive shelf (e.g., read, to-read, currently-reading)')
   .option('--title <search>', 'Filter books by title (case-insensitive substring match)')
   .option('--sort-by <field>', 'Sort order (date-read, date-added, title, author, rating)')
+  .option('--resume', 'Resume scraping by skipping books that already have output files')
   .option('--no-progress', 'Disable progress reporting')
   .action(async (url: string, options: any) => {
     try {
@@ -44,6 +45,7 @@ program
         limit,
         shelfFilter,
         titleFilter,
+        resume: options.resume || false,
       });
 
       let bookCount = 0;
@@ -56,6 +58,7 @@ program
         shelfFilter,
         titleFilter,
         sort: options.sortBy || null,
+        resume: options.resume || false,
         progressCallback: options.progress
           ? (current: number) => {
               bookCount = current;

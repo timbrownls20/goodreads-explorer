@@ -179,6 +179,7 @@ export interface ScraperOptions {
   titleFilter?: string; // filter books by title (case-insensitive substring match)
   sort?: string | null; // sort order (default null)
   outputDir?: string; // output directory for individual books
+  resume?: boolean; // skip books that already have output files (default false)
   progressCallback?: (current: number, total: number) => void;
 }
 
@@ -196,6 +197,7 @@ export class GoodreadsScraper {
       titleFilter: options.titleFilter ?? '',
       sort: options.sort ?? null,
       outputDir: options.outputDir ?? './output',
+      resume: options.resume ?? false,
       progressCallback: options.progressCallback ?? (() => {}),
     };
 
@@ -478,6 +480,20 @@ export class GoodreadsScraper {
     const fullBookUrl = bookUrl.startsWith('http')
       ? bookUrl
       : `https://www.goodreads.com${bookUrl}`;
+
+    // Check if file already exists (resume functionality)
+    if (this.options.resume) {
+      const goodreadsId = fullBookUrl.match(/\/book\/show\/([^/?]+)/)?.[1];
+      if (goodreadsId) {
+        const outputDir = path.join(this.options.outputDir, `${userId}-${username}`);
+        const filepath = path.join(outputDir, `${goodreadsId}.json`);
+
+        if (fs.existsSync(filepath)) {
+          logger.info(`Skipping book (already scraped): ${title} (${goodreadsId})`);
+          return null;
+        }
+      }
+    }
 
     // Extract author
     const author = cleanScrapedText($row.find('.author a, .field.author a').first().text()) || '';
