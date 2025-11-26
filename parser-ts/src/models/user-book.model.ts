@@ -58,7 +58,7 @@ export class UserBookRelation {
   userRating?: number | null;
 
   @IsString()
-  readingStatus: ReadingStatus;
+  readingStatus: string;
 
   @IsArray()
   @ValidateNested({ each: true })

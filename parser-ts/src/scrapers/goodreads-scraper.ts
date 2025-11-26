@@ -369,7 +369,7 @@ export class GoodreadsScraper {
       const $ = cheerio.load(html);
 
       // Parse books from table
-      const books = await this.extractBooksFromPage($, status, userId, username);
+      const books = await this.extractBooksFromPage($, status, userId, username, effectiveShelf);
 
       // Apply limit - only add books up to the limit
       if (this.options.limit) {
@@ -408,7 +408,8 @@ export class GoodreadsScraper {
     $: cheerio.CheerioAPI,
     status: ReadingStatus,
     userId: string,
-    username: string
+    username: string,
+    shelfSlug: string
   ): Promise<UserBookRelation[]> {
     const userBooks: UserBookRelation[] = [];
 
@@ -417,7 +418,7 @@ export class GoodreadsScraper {
 
     for (const row of bookRows) {
       try {
-        const userBook = await this.parseBookRow($, $(row), status, userId, username);
+        const userBook = await this.parseBookRow($, $(row), status, userId, username, shelfSlug);
         if (userBook) {
           userBooks.push(userBook);
         }
@@ -439,7 +440,8 @@ export class GoodreadsScraper {
     $row: cheerio.Cheerio<any>,
     status: ReadingStatus,
     userId: string,
-    username: string
+    username: string,
+    shelfSlug: string
   ): Promise<UserBookRelation | null> {
     // Extract basic info from table row
     const titleElement = $row.find('.title a, .field.title a').first();
@@ -592,7 +594,7 @@ export class GoodreadsScraper {
     // Save individual book file
     await this.saveIndividualBook(book, {
       userRating,
-      readingStatus: status,
+      readingStatus: shelfSlug,
       shelves,
       review,
       dateAdded,
@@ -604,7 +606,7 @@ export class GoodreadsScraper {
     const userBook = new UserBookRelation({
       book,
       userRating,
-      readingStatus: status,
+      readingStatus: shelfSlug,
       shelves,
       review,
       dateAdded,
@@ -622,7 +624,7 @@ export class GoodreadsScraper {
     book: Book,
     userData: {
       userRating: number | null;
-      readingStatus: ReadingStatus;
+      readingStatus: string;
       shelves: Shelf[];
       review: Review | null;
       dateAdded: string | null;
