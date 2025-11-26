@@ -487,13 +487,13 @@ export class GoodreadsScraper {
     const ratingMatch = ratingText?.match(/(\d+) of 5 stars/);
     const userRating = ratingMatch ? parseInt(ratingMatch[1], 10) : null;
 
-    // Extract shelves
+    // Extract shelves from table row (fallback)
     const shelfElements = $row.find('.shelf a, .field.shelf a');
-    const shelves: Shelf[] = [];
+    const tableRowShelves: Shelf[] = [];
     shelfElements.each((_, el) => {
       const shelfName = cleanScrapedText($(el).text());
       if (shelfName) {
-        shelves.push(
+        tableRowShelves.push(
           new Shelf({
             name: shelfName,
             isBuiltin: ['read', 'currently-reading', 'to-read'].includes(shelfName.toLowerCase()),
@@ -526,15 +526,17 @@ export class GoodreadsScraper {
     const bookHtml = await this.fetchWithRetry(fullBookUrl);
     const bookData = BookParser.parseBookPage(bookHtml, fullBookUrl);
 
-    // Extract read dates - fetch review page if available to get complete timeline
+    // Extract read dates and shelves - fetch review page if available
     let readRecords: ReadRecord[] = [];
+    let reviewPageShelves: Shelf[] = [];
 
     if (goodreadsViewUrl) {
-      // Fetch review page to parse reading timeline (for multiple reads)
-      logger.debug('Fetching review page for timeline', { reviewUrl: goodreadsViewUrl });
+      // Fetch review page to parse reading timeline and shelves
+      logger.debug('Fetching review page for timeline and shelves', { reviewUrl: goodreadsViewUrl });
       try {
         const reviewHtml = await this.fetchWithRetry(goodreadsViewUrl);
         readRecords = parseReadingTimeline(reviewHtml);
+        reviewPageShelves = LibraryParser.parseReviewPageShelves(reviewHtml);
       } catch (error) {
         logger.warn('Failed to fetch review page, falling back to table data', {
           reviewUrl: goodreadsViewUrl,
@@ -567,6 +569,23 @@ export class GoodreadsScraper {
       }
     }
 
+    // Determine final shelves list:
+    // - Use review page shelves if available (more complete)
+    // - Otherwise use table row shelves (fallback)
+    // - Filter out the exclusive shelf (which is the reading_status)
+    let finalShelves: Shelf[];
+    if (reviewPageShelves.length > 0) {
+      // Use review page shelves and filter out the exclusive shelf
+      finalShelves = reviewPageShelves.filter(
+        shelf => shelf.name.toLowerCase() !== shelfSlug.toLowerCase()
+      );
+    } else {
+      // Fallback to table row shelves
+      finalShelves = tableRowShelves.filter(
+        shelf => shelf.name.toLowerCase() !== shelfSlug.toLowerCase()
+      );
+    }
+
     // Create complete book object with all metadata
     const book = new Book({
       goodreadsId: bookData.goodreadsId || fullBookUrl.match(/\/book\/show\/([^/?]+)/)?.[1] || '',
@@ -595,7 +614,7 @@ export class GoodreadsScraper {
     await this.saveIndividualBook(book, {
       userRating,
       readingStatus: shelfSlug,
-      shelves,
+      shelves: finalShelves,
       review,
       dateAdded,
       readRecords,
@@ -607,7 +626,7 @@ export class GoodreadsScraper {
       book,
       userRating,
       readingStatus: shelfSlug,
-      shelves,
+      shelves: finalShelves,
       review,
       dateAdded,
       readRecords,

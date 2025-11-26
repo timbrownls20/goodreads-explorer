@@ -200,19 +200,31 @@ export class LibraryParser {
   static parseReviewPageShelves(html: string): Shelf[] {
     const $ = cheerio.load(html);
     const shelves: Shelf[] = [];
+    const seenShelves = new Set<string>();
 
-    // Find all shelf links
-    $('.elementList .shelfStat a, .bookPageShelfLinks a').each((_, element) => {
-      const shelfName = $(element).text().trim();
+    // Find all links with shelf parameter in the href
+    $('a[href*="shelf="]').each((_, element) => {
+      const href = $(element).attr('href') || '';
+      const text = $(element).text().trim();
 
-      if (shelfName && shelfName.length > 0) {
-        shelves.push(
-          new Shelf({
-            name: shelfName,
-            isBuiltin: ['read', 'currently-reading', 'to-read'].includes(shelfName.toLowerCase()),
-            bookCount: null,
-          })
-        );
+      // Extract shelf name from URL parameter
+      const match = href.match(/[?&]shelf=([^&]+)/);
+      if (match) {
+        const shelfName = match[1];
+
+        // Only include if:
+        // 1. Link text matches the shelf name (filters out navigation links)
+        // 2. Haven't seen this shelf before (deduplicate)
+        if (text === shelfName && !seenShelves.has(shelfName)) {
+          seenShelves.add(shelfName);
+          shelves.push(
+            new Shelf({
+              name: shelfName,
+              isBuiltin: ['read', 'currently-reading', 'to-read'].includes(shelfName.toLowerCase()),
+              bookCount: null,
+            })
+          );
+        }
       }
     });
 
