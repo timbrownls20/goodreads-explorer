@@ -20,6 +20,7 @@
     "scrape:dev": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --limit 3",
     "scrape:title:dev": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --title Babel",
     "scrape:shelf:dev": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --shelf paused --limit 10",
+    "scrape:all": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --limit 3",
     "prepublishOnly": "pnpm run clean && pnpm run build"
   },
   "keywords": [

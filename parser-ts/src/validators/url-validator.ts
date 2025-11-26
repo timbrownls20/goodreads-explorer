@@ -2,6 +2,7 @@ export interface ValidationResult {
   isValid: boolean;
   normalizedUrl?: string;
   userId?: string;
+  username?: string;
   error?: string;
 }
 
@@ -21,6 +22,9 @@ export class UrlValidator {
         };
       }
 
+      // Extract username from URL (if present)
+      const username = this.extractUsernameFromUrl(url);
+
       // Normalize URL
       const normalizedUrl = this.normalizeProfileUrl(url);
 
@@ -28,6 +32,7 @@ export class UrlValidator {
         isValid: true,
         normalizedUrl,
         userId,
+        username: username || undefined,
       };
     } catch (error) {
       return {
@@ -50,6 +55,31 @@ export class UrlValidator {
 
       // Pattern: /user/show/12345-username or /user/show/12345
       const match = urlObj.pathname.match(/\/user\/show\/(\d+)/);
+
+      if (match && match[1]) {
+        return match[1];
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Extract username from Goodreads profile URL
+   * Pattern: /user/show/12345-username -> "username"
+   */
+  static extractUsernameFromUrl(url: string): string | null {
+    try {
+      const urlObj = new URL(url);
+
+      if (!urlObj.hostname.includes('goodreads.com')) {
+        return null;
+      }
+
+      // Pattern: /user/show/12345-username
+      const match = urlObj.pathname.match(/\/user\/show\/\d+-(.+)/);
 
       if (match && match[1]) {
         return match[1];

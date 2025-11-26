@@ -241,7 +241,9 @@ export class GoodreadsScraper {
     }
 
     const libraryResult = LibraryParser.parseLibraryPage(reviewListHtml, reviewListUrl);
-    const username = libraryResult.username || `user-${userId}`;
+
+    // Prefer username from URL, then from HTML parsing, then fallback to user-{userId}
+    const username = validation.username || libraryResult.username || `user-${userId}`;
 
     logger.info('Profile validated', { userId, username });
 
@@ -367,7 +369,7 @@ export class GoodreadsScraper {
       const $ = cheerio.load(html);
 
       // Parse books from table
-      const books = await this.extractBooksFromPage($, status, username);
+      const books = await this.extractBooksFromPage($, status, userId, username);
 
       // Apply limit - only add books up to the limit
       if (this.options.limit) {
@@ -405,6 +407,7 @@ export class GoodreadsScraper {
   private async extractBooksFromPage(
     $: cheerio.CheerioAPI,
     status: ReadingStatus,
+    userId: string,
     username: string
   ): Promise<UserBookRelation[]> {
     const userBooks: UserBookRelation[] = [];
@@ -414,7 +417,7 @@ export class GoodreadsScraper {
 
     for (const row of bookRows) {
       try {
-        const userBook = await this.parseBookRow($, $(row), status, username);
+        const userBook = await this.parseBookRow($, $(row), status, userId, username);
         if (userBook) {
           userBooks.push(userBook);
         }
@@ -435,6 +438,7 @@ export class GoodreadsScraper {
     $: cheerio.CheerioAPI,
     $row: cheerio.Cheerio<any>,
     status: ReadingStatus,
+    userId: string,
     username: string
   ): Promise<UserBookRelation | null> {
     // Extract basic info from table row
@@ -594,7 +598,7 @@ export class GoodreadsScraper {
       dateAdded,
       readRecords,
       goodreadsViewUrl,
-    }, username);
+    }, userId, username);
 
     // Create user-book relation
     const userBook = new UserBookRelation({
@@ -625,9 +629,10 @@ export class GoodreadsScraper {
       readRecords: ReadRecord[];
       goodreadsViewUrl: string | null;
     },
+    userId: string,
     username: string
   ): Promise<void> {
-    const outputDir = path.join(this.options.outputDir, `${username}_library`);
+    const outputDir = path.join(this.options.outputDir, `${userId}-${username}`);
 
     // Create directory if it doesn't exist
     if (!fs.existsSync(outputDir)) {
@@ -658,6 +663,7 @@ export class GoodreadsScraper {
         ratings_count: book.ratingsCount,
         cover_image_url: book.coverImageUrl,
         goodreads_url: book.goodreadsUrl,
+        goodreads_view_url: userData.goodreadsViewUrl,
       },
       user_rating: userData.userRating,
       reading_status: userData.readingStatus,
@@ -678,7 +684,6 @@ export class GoodreadsScraper {
         date_started: rr.dateStarted,
         date_finished: rr.dateFinished,
       })),
-      goodreads_view_url: userData.goodreadsViewUrl,
       scraped_at: new Date().toISOString(),
       _metadata: {
         username,
