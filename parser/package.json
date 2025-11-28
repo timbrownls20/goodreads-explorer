@@ -1,5 +1,5 @@
 {
-  "name": "goodreads-parser-ts",
+  "name": "goodreads-parser",
   "version": "1.0.0",
   "description": "TypeScript Goodreads library parser and scraper",
   "main": "dist/index.js",
