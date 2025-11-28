@@ -390,6 +390,17 @@ export class GoodreadsScraper {
       // Add scraped books
       userBooks.push(...result.books);
 
+      // In resume mode: stop if page has books but all were skipped
+      // This assumes books are in the same order as previous scrape
+      if (this.options.resume && result.totalRows > 0 && result.books.length === 0) {
+        logger.info('Stopping: all books on page already scraped', {
+          page,
+          rowsOnPage: result.totalRows,
+          shelf: effectiveShelf
+        });
+        hasNextPage = false;
+      }
+
       // Apply limit based on total books processed (not just scraped)
       // This ensures --limit 10 processes 10 books total, regardless of resume skips
       if (this.options.limit && totalProcessed >= this.options.limit) {
