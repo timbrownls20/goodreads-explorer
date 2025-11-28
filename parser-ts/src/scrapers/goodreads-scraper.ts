@@ -377,18 +377,24 @@ export class GoodreadsScraper {
       // Track total processed (includes both scraped and skipped books)
       totalProcessed += result.totalRows;
 
-      // Apply limit - only add books up to the limit
-      if (this.options.limit) {
-        const remainingSlots = this.options.limit - userBooks.length;
-        const booksToAdd = result.books.slice(0, remainingSlots);
-        userBooks.push(...booksToAdd);
+      // Add scraped books
+      userBooks.push(...result.books);
 
-        // Stop if we've reached the limit
-        if (userBooks.length >= this.options.limit) {
-          hasNextPage = false;
-        }
-      } else {
-        userBooks.push(...result.books);
+      // Apply limit based on total books processed (not just scraped)
+      // This ensures --limit 10 processes 10 books total, regardless of resume skips
+      if (this.options.limit && totalProcessed >= this.options.limit) {
+        hasNextPage = false;
+      }
+
+      // In resume mode: stop if entire page was skipped (all books already exist)
+      // This prevents unnecessary pagination through already-scraped content
+      if (this.options.resume && result.totalRows > 0 && result.books.length === 0) {
+        logger.info('Stopping pagination: entire page already scraped', {
+          page,
+          rowsOnPage: result.totalRows,
+          shelf: effectiveShelf
+        });
+        hasNextPage = false;
       }
 
       this.options.progressCallback(userBooks.length, totalProcessed);
@@ -498,8 +504,10 @@ export class GoodreadsScraper {
         const filepath = path.join(outputDir, `${goodreadsId}.json`);
 
         if (fs.existsSync(filepath)) {
-          logger.info(`Skipping book (already scraped): ${title} (${goodreadsId})`);
+          logger.info(`✓ Skipping (exists): ${goodreadsId}.json`);
           return null;
+        } else {
+          logger.info(`→ Will scrape: ${goodreadsId}.json (not found at: ${filepath})`);
         }
       }
     }
