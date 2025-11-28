@@ -76,7 +76,7 @@ describe('Parser Models', () => {
         book,
         userRating: 5,
         readingStatus: ReadingStatus.READ,
-        shelves: [new Shelf({ name: 'read', isBuiltin: true })],
+        shelves: ['read'],
         readRecords: [new ReadRecord({ dateStarted: null, dateFinished: null })],
       });
 
