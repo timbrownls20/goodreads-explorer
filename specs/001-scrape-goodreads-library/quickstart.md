@@ -12,252 +12,239 @@ This quickstart guide demonstrates how to use the Goodreads library scraper to e
 
 ### Prerequisites
 
-- Python 3.10 or higher (Python 3.13 recommended)
-- pip package manager
+- Node.js 18+ LTS (Node.js 20+ recommended)
+- pnpm package manager (or npm)
 - Internet connection for scraping Goodreads
 
-### Setup Virtual Environment
-
-It's recommended to use a virtual environment to avoid conflicts with system packages:
+### Install Dependencies
 
 ```bash
-# Navigate to the parse directory
-cd goodreads-explorer/parse
+# Navigate to the parser directory
+cd goodreads-explorer/parser
 
-# Create a virtual environment
-python3 -m venv goodreads
+# Install dependencies using pnpm (recommended)
+pnpm install
 
-# Activate the virtual environment
-source goodreads/bin/activate  # On macOS/Linux
-# OR
-goodreads\Scripts\activate     # On Windows
+# OR using npm
+npm install
 ```
 
-### Install the Package
+### Build the Project
 
 ```bash
-# Install in editable mode with all dependencies
-pip3 install -e .
+# Compile TypeScript to JavaScript
+pnpm build
 
-# Or install with development dependencies
-pip3 install -e ".[dev]"
+# OR using npm
+npm run build
 ```
 
 This will install:
-- Core dependencies (beautifulsoup4, lxml, httpx, pydantic, etc.)
-- The `goodreads-explorer` CLI command
-- Development tools (pytest, mypy, ruff) if using `[dev]`
+- Core dependencies (cheerio, axios, class-validator, winston, etc.)
+- TypeScript compiler and type definitions
+- Development tools (jest, eslint, prettier)
 
 ## Basic Usage
-
-**Note**: Make sure your virtual environment is activated before running commands:
-```bash
-source goodreads/bin/activate  # On macOS/Linux
-# OR
-goodreads\Scripts\activate     # On Windows
-```
 
 ### CLI Interface
 
 #### 1. Scrape a Goodreads Library
 
 ```bash
-# Scrape library and export to JSON
-goodreads-explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown
+# Using pnpm (from parser directory)
+pnpm run scrape:dev
 
-# Scrape and specify output format
-goodreads-explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown --format json
+# Or run the CLI directly with ts-node
+npx ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown
 
-# Scrape and export to CSV
-goodreads-explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown --format csv
-
-# Scrape and export to both JSON and CSV
-goodreads-explorer scrape https://www.goodreads.com/user/show/172435467-tim-brown --format all
+# Or after building, use the compiled version
+node dist/cli/scrape-library.js scrape https://www.goodreads.com/user/show/172435467-tim-brown
 ```
 
 **Output**:
 ```
-Scraping library for user: tim-brown (ID: 172435467)
-Progress: [████████████████████] 100% | 250/250 books | ETA: 0:00
-✓ Scraped 250 books successfully
-✓ Exported to: tim-brown_library_2025-10-28.json
+Successfully scraped 250 books from tim-brown
+Files saved to: ./output/tim-brown_library/
 ```
+
+Each book is saved as an individual JSON file named `{goodreads-id}.json`.
 
 #### 2. Specify Output Directory
 
 ```bash
-# Save exports to custom directory
-goodreads-explorer scrape \
+# Save files to custom directory
+npx ts-node src/cli/scrape-library.ts scrape \
   https://www.goodreads.com/user/show/172435467-tim-brown \
-  --output ./exports/tim-brown_library.json
+  --output-dir ./exports
 ```
 
 #### 3. Advanced Options
 
 ```bash
 # Scrape only the first 50 books (useful for testing)
-goodreads-explorer scrape \
+npx ts-node src/cli/scrape-library.ts scrape \
   https://www.goodreads.com/user/show/172435467-tim-brown \
   --limit 50
 
-# Use rate limiting (slower scraping to be more respectful)
-goodreads-explorer scrape \
+# Scrape only a specific shelf
+npx ts-node src/cli/scrape-library.ts scrape \
   https://www.goodreads.com/user/show/172435467-tim-brown \
-  --rate-limit 2.0
+  --shelf read
+
+# Filter by title
+npx ts-node src/cli/scrape-library.ts scrape \
+  https://www.goodreads.com/user/show/172435467-tim-brown \
+  --title "Harry Potter"
+
+# Use rate limiting (slower scraping, delay in ms)
+npx ts-node src/cli/scrape-library.ts scrape \
+  https://www.goodreads.com/user/show/172435467-tim-brown \
+  --rate-limit 2000
+
+# Resume interrupted scrape (skip already downloaded books)
+npx ts-node src/cli/scrape-library.ts scrape \
+  https://www.goodreads.com/user/show/172435467-tim-brown \
+  --resume
 
 # Increase timeout and retries for slow connections
-goodreads-explorer scrape \
+npx ts-node src/cli/scrape-library.ts scrape \
   https://www.goodreads.com/user/show/172435467-tim-brown \
-  --timeout 60 --max-retries 5
+  --timeout 60000 --max-retries 5
 ```
 
 ### Library/Programmatic Interface
 
 #### Basic Scraping
 
-```python
-from src.lib import scrape_library
-from src.exporters import export_to_json
-from pathlib import Path
+```typescript
+import { scrapeLibrary } from './api';
+import { JSONExporter } from './exporters/json-exporter';
 
-# Scrape library
-library = scrape_library("https://www.goodreads.com/user/show/172435467-tim-brown")
+// Scrape library
+const library = await scrapeLibrary("https://www.goodreads.com/user/show/172435467-tim-brown");
 
-# Export to JSON
-export_to_json(library, Path("tim-brown_library.json"))
+// Export to JSON (if exporter is implemented)
+const exporter = new JSONExporter();
+exporter.export(library, "./tim-brown_library.json");
 
-# Access data
-print(f"Total books: {library.total_books}")
-print(f"Username: {library.username}")
+// Access data
+console.log(`Total books: ${library.totalBooks}`);
+console.log(`Username: ${library.username}`);
 
-# Iterate through books
-for user_book in library.user_books:
-    print(f"{user_book.book.title} by {user_book.book.author}")
-    print(f"  Rating: {user_book.user_rating}/5")
-    print(f"  Status: {user_book.reading_status}")
-    print(f"  Shelves: {[s.name for s in user_book.shelves]}")
+// Iterate through books
+for (const userBook of library.userBooks) {
+    console.log(`${userBook.book.title} by ${userBook.book.author}`);
+    console.log(`  Rating: ${userBook.userRating}/5`);
+    console.log(`  Status: ${userBook.readingStatus}`);
+    console.log(`  Shelves: ${userBook.shelves.join(', ')}`);
+}
 ```
 
 #### Advanced: Custom Filtering
 
-```python
-from src.lib import scrape_library
+```typescript
+import { scrapeLibrary } from './api';
 
-library = scrape_library("https://www.goodreads.com/user/show/172435467-tim-brown")
+const library = await scrapeLibrary("https://www.goodreads.com/user/show/172435467-tim-brown");
 
-# Filter books by rating
-five_star_books = [
-    ub for ub in library.user_books
-    if ub.user_rating == 5
-]
+// Filter books by rating
+const fiveStarBooks = library.userBooks.filter(ub => ub.userRating === 5);
 
-# Filter by reading status
-currently_reading = [
-    ub for ub in library.user_books
-    if ub.reading_status == "currently-reading"
-]
+// Filter by reading status
+const currentlyReading = library.userBooks.filter(
+    ub => ub.readingStatus === 'currently-reading'
+);
 
-# Filter by shelf
-favorites = [
-    ub for ub in library.user_books
-    if any(shelf.name == "favorites" for shelf in ub.shelves)
-]
+// Filter by shelf
+const favorites = library.userBooks.filter(
+    ub => ub.shelves.includes('favorites')
+);
 
-# Filter by genre
-mystery_books = [
-    ub for ub in library.user_books
-    if "mystery" in ub.book.genres
-]
+// Filter by genre
+const mysteryBooks = library.userBooks.filter(
+    ub => ub.book.genres?.includes('mystery')
+);
 
-print(f"5-star books: {len(five_star_books)}")
-print(f"Currently reading: {len(currently_reading)}")
-print(f"Favorites: {len(favorites)}")
-print(f"Mystery books: {len(mystery_books)}")
+console.log(`5-star books: ${fiveStarBooks.length}`);
+console.log(`Currently reading: ${currentlyReading.length}`);
+console.log(`Favorites: ${favorites.length}`);
+console.log(`Mystery books: ${mysteryBooks.length}`);
 ```
 
 #### Error Handling
 
-```python
-from src.lib import scrape_library
-from src.exceptions import (
+```typescript
+import { scrapeLibrary } from './api';
+import {
     InvalidURLError,
     PrivateProfileError,
     NetworkError,
-    RateLimitError
-)
+    ScrapingError
+} from './exceptions/parser-exceptions';
 
-try:
-    library = scrape_library("https://www.goodreads.com/user/show/172435467-tim-brown")
-except InvalidURLError as e:
-    print(f"Invalid Goodreads URL: {e}")
-except PrivateProfileError:
-    print("Profile is private and cannot be scraped")
-except RateLimitError:
-    print("Rate limit exceeded. Please wait before retrying.")
-except NetworkError as e:
-    print(f"Network error: {e}. Check your internet connection.")
+try {
+    const library = await scrapeLibrary("https://www.goodreads.com/user/show/172435467-tim-brown");
+} catch (error) {
+    if (error instanceof InvalidURLError) {
+        console.error(`Invalid Goodreads URL: ${error.message}`);
+    } else if (error instanceof PrivateProfileError) {
+        console.error("Profile is private and cannot be scraped");
+    } else if (error instanceof NetworkError) {
+        console.error(`Network error: ${error.message}. Check your internet connection.`);
+    } else if (error instanceof ScrapingError) {
+        console.error(`Scraping error: ${error.message}`);
+    }
+}
 ```
 
 #### Progress Callbacks
 
-```python
-from src.lib import scrape_library
+```typescript
+import { scrapeLibrary } from './api';
 
-def progress_callback(current, total, message):
-    """
-    Progress callback receives:
-    - current: Number of books scraped so far
-    - total: Total books (same as current until scraping completes)
-    - message: Descriptive progress message
-    """
-    print(message)
-
-library = scrape_library(
+const library = await scrapeLibrary(
     "https://www.goodreads.com/user/show/172435467-tim-brown",
-    progress_callback=progress_callback
-)
+    {
+        progressCallback: (scraped: number, totalProcessed: number) => {
+            console.log(`Progress: ${scraped} books scraped, ${totalProcessed} total processed`);
+        }
+    }
+);
 ```
 
 ## Export Formats
 
 ### JSON Export
 
-**File naming**: `{username}_library_{YYYY-MM-DD}.json`
+**File naming**: Individual files per book in `{username}_library/` directory named `{goodreads-id}.json`
 
 **Structure**:
 ```json
 {
-  "user_id": "172435467",
-  "username": "tim-brown",
-  "profile_url": "https://www.goodreads.com/user/show/172435467-tim-brown",
-  "total_books": 250,
-  "scraped_at": "2025-10-28T10:30:00Z",
-  "schema_version": "1.0.0",
-  "user_books": [
+  "book": {
+    "goodreadsId": "123",
+    "title": "Example Book",
+    "author": "Jane Doe",
+    "isbn": "978-0-123456-78-9",
+    "publicationDate": "2020-01-01",
+    "pageCount": 350,
+    "genres": ["fiction", "mystery"],
+    "goodreadsUrl": "https://www.goodreads.com/book/show/123"
+  },
+  "userRating": 5,
+  "readingStatus": "read",
+  "shelves": ["read", "favorites"],
+  "review": {
+    "reviewText": "Amazing book!",
+    "reviewDate": "2025-01-15"
+  },
+  "readRecords": [
     {
-      "book": {
-        "goodreads_id": "123",
-        "title": "Example Book",
-        "author": "Jane Doe",
-        "isbn": "978-0-123456-78-9",
-        "publication_year": 2020,
-        "page_count": 350,
-        "genres": ["fiction", "mystery"],
-        ...
-      },
-      "user_rating": 5,
-      "reading_status": "read",
-      "shelves": [
-        {"name": "read", "is_builtin": true},
-        {"name": "favorites", "is_builtin": false}
-      ],
-      "review": {
-        "review_text": "Amazing book!",
-        "review_date": "2025-01-15T14:30:00Z"
-      },
-      "date_finished": "2025-01-15T00:00:00Z"
+      "dateStarted": "2025-01-01",
+      "dateFinished": "2025-01-15"
     }
-  ]
+  ],
+  "dateAdded": "2024-12-01"
 }
 ```
 
@@ -287,80 +274,95 @@ See [contracts/csv-export-spec.md](./contracts/csv-export-spec.md) for detailed 
 
 ```bash
 # Create JSON backup
-goodreads-explorer scrape \
+npx ts-node src/cli/scrape-library.ts scrape \
   https://www.goodreads.com/user/show/172435467-tim-brown \
-  --format json \
-  --output ./backups/tim-brown_library.json
+  --output-dir ./backups
 ```
 
 ### 2. Analyze Reading Patterns
 
-```python
-from src.lib import scrape_library
-from collections import Counter
-from datetime import datetime
+```typescript
+import { scrapeLibrary } from './api';
 
-library = scrape_library("https://www.goodreads.com/user/show/172435467-tim-brown")
+const library = await scrapeLibrary("https://www.goodreads.com/user/show/172435467-tim-brown");
 
-# Books read per year
-books_by_year = Counter(
-    ub.date_finished.year
-    for ub in library.user_books
-    if ub.date_finished
-)
+// Books read per year
+const booksByYear: { [year: string]: number } = {};
+library.userBooks.forEach(ub => {
+    if (ub.readRecords && ub.readRecords.length > 0) {
+        const dateFinished = ub.readRecords[0].dateFinished;
+        if (dateFinished) {
+            const year = new Date(dateFinished).getFullYear().toString();
+            booksByYear[year] = (booksByYear[year] || 0) + 1;
+        }
+    }
+});
 
-# Average rating
-ratings = [ub.user_rating for ub in library.user_books if ub.user_rating]
-avg_rating = sum(ratings) / len(ratings) if ratings else 0
+// Average rating
+const ratings = library.userBooks
+    .map(ub => ub.userRating)
+    .filter(r => r != null) as number[];
+const avgRating = ratings.length > 0
+    ? ratings.reduce((a, b) => a + b, 0) / ratings.length
+    : 0;
 
-# Most read genres
-genre_counter = Counter()
-for ub in library.user_books:
-    genre_counter.update(ub.book.genres)
+// Most read genres
+const genreCounter: { [genre: string]: number } = {};
+library.userBooks.forEach(ub => {
+    ub.book.genres?.forEach(genre => {
+        genreCounter[genre] = (genreCounter[genre] || 0) + 1;
+    });
+});
 
-print(f"Books read by year: {dict(books_by_year)}")
-print(f"Average rating: {avg_rating:.2f}")
-print(f"Top 5 genres: {genre_counter.most_common(5)}")
+const topGenres = Object.entries(genreCounter)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5);
+
+console.log(`Books read by year: ${JSON.stringify(booksByYear)}`);
+console.log(`Average rating: ${avgRating.toFixed(2)}`);
+console.log(`Top 5 genres: ${JSON.stringify(topGenres)}`);
 ```
 
-### 3. Export for Spreadsheet Analysis
+### 3. Scrape Specific Shelf
 
 ```bash
-# Export to CSV for Excel
-goodreads-explorer scrape \
+# Scrape only "read" shelf
+npx ts-node src/cli/scrape-library.ts scrape \
   https://www.goodreads.com/user/show/172435467-tim-brown \
-  --format csv
-
-# Open in Excel or Google Sheets
-# - Filter by rating, genre, shelves
-# - Create pivot tables
-# - Visualize reading patterns
+  --shelf read
 ```
 
 ### 4. Find Books to Re-read
 
-```python
-from src.lib import scrape_library
-from datetime import datetime, timedelta
+```typescript
+import { scrapeLibrary } from './api';
 
-library = scrape_library("https://www.goodreads.com/user/show/172435467-tim-brown")
+const library = await scrapeLibrary("https://www.goodreads.com/user/show/172435467-tim-brown");
 
-# Find 5-star books read more than 2 years ago
-two_years_ago = datetime.now() - timedelta(days=730)
-reread_candidates = [
-    ub for ub in library.user_books
-    if ub.user_rating == 5
-    and ub.date_finished
-    and ub.date_finished < two_years_ago
-]
+// Find 5-star books read more than 2 years ago
+const twoYearsAgo = new Date();
+twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
 
-# Sort by rating date (oldest first)
-reread_candidates.sort(key=lambda ub: ub.date_finished or datetime.min)
+const rereadCandidates = library.userBooks
+    .filter(ub =>
+        ub.userRating === 5 &&
+        ub.readRecords &&
+        ub.readRecords.length > 0 &&
+        ub.readRecords[0].dateFinished &&
+        new Date(ub.readRecords[0].dateFinished) < twoYearsAgo
+    )
+    .sort((a, b) => {
+        const dateA = a.readRecords?.[0]?.dateFinished || '';
+        const dateB = b.readRecords?.[0]?.dateFinished || '';
+        return dateA.localeCompare(dateB);
+    });
 
-print("Books to consider re-reading:")
-for ub in reread_candidates[:10]:
-    print(f"- {ub.book.title} by {ub.book.author}")
-    print(f"  Read: {ub.date_finished.strftime('%Y-%m-%d')}")
+console.log("Books to consider re-reading:");
+rereadCandidates.slice(0, 10).forEach(ub => {
+    const dateFinished = ub.readRecords?.[0]?.dateFinished || 'Unknown';
+    console.log(`- ${ub.book.title} by ${ub.book.author}`);
+    console.log(`  Read: ${dateFinished}`);
+});
 ```
 
 ## Rate Limiting
@@ -444,13 +446,16 @@ Run test suite to verify scraper functionality:
 
 ```bash
 # Run all tests
-pytest
+pnpm test
 
-# Run contract tests only
-pytest tests/contract/
+# OR using npm
+npm test
 
 # Run with coverage report
-pytest --cov=goodreads_explorer --cov-report=html
+pnpm run test:cov
+
+# OR
+npm run test:cov
 ```
 
 ## Next Steps
