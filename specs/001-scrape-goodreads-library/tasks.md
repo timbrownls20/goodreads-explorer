@@ -245,7 +245,7 @@
 
 - [x] T099 [P] Add comprehensive error messages with context per Constitution Principle V (source data, operation attempted, expected vs actual)
 - [x] T100 [P] Add CLI help text and usage examples to parse/src/cli/commands.py
-- [ ] T101 Add resume capability for interrupted scrapes per SC-004 (checkpoint files, deduplication, no data loss)
+- [X] T101 Add resume capability for interrupted scrapes per SC-004 (checkpoint files, deduplication, no data loss)
 - [x] T102 [P] Add timeout configuration to httpx client (default 30s, configurable via CLI --timeout)
 - [x] T103 [P] Add retry count configuration (default 3, configurable via CLI --retries)
 - [x] T104 [P] Create parse/README.md with installation instructions and basic usage (link to quickstart.md)

@@ -70,3 +70,8 @@ exports/
 !*-schema.json
 /.specify
 /parse/tim-brown_library
+/dashboard-backend/node_modules
+/dashboard-ui/node_modules
+/parser/coverage
+/parser/node_modules
+/parser/output
