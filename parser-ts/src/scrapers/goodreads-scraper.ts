@@ -374,6 +374,16 @@ export class GoodreadsScraper {
       // Parse books from table
       const result = await this.extractBooksFromPage($, status, userId, username, effectiveShelf);
 
+      // Stop if shelf has no books at all
+      if (result.totalRows === 0) {
+        logger.info('Stopping: shelf has no books', {
+          page,
+          shelf: effectiveShelf
+        });
+        hasNextPage = false;
+        break;
+      }
+
       // Track total processed (includes both scraped and skipped books)
       totalProcessed += result.totalRows;
 
@@ -383,17 +393,6 @@ export class GoodreadsScraper {
       // Apply limit based on total books processed (not just scraped)
       // This ensures --limit 10 processes 10 books total, regardless of resume skips
       if (this.options.limit && totalProcessed >= this.options.limit) {
-        hasNextPage = false;
-      }
-
-      // In resume mode: stop if entire page was skipped (all books already exist)
-      // This prevents unnecessary pagination through already-scraped content
-      if (this.options.resume && result.totalRows > 0 && result.books.length === 0) {
-        logger.info('Stopping pagination: entire page already scraped', {
-          page,
-          rowsOnPage: result.totalRows,
-          shelf: effectiveShelf
-        });
         hasNextPage = false;
       }
 
