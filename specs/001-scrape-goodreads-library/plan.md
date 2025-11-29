@@ -11,19 +11,19 @@ Extract library information from Goodreads user profiles by scraping HTML pages.
 
 ## Technical Context
 
-**Language/Version**: Python 3.10+ (Python 3.12 recommended for development)
-**Primary Dependencies**: BeautifulSoup4 + lxml (HTML parsing), httpx (HTTP client), pydantic v2 (data validation), aiometer (future async rate limiting)
+**Language/Version**: TypeScript 5.x + Node.js 18+ LTS
+**Primary Dependencies**: Cheerio (HTML parsing), Axios (HTTP client), class-validator + class-transformer (data validation), reflect-metadata (decorator support)
 **Storage**: Files (JSON/CSV exports), no database required for MVP
-**Testing**: pytest with pytest-asyncio, pytest-cov, pytest-mock plugins
+**Testing**: Jest with ts-jest, @types/jest plugins
 **Target Platform**: Cross-platform CLI (Linux, macOS, Windows)
 **Project Type**: Single project (CLI + library)
 **Performance Goals**: Process 1000 books in <20 minutes (50 books/minute accounting for 1 req/sec rate limit)
 **Constraints**: 1 request/second rate limit, must handle network interruptions gracefully
 **Scale/Scope**: Libraries up to 1000 books (typical: 50-500), single-user extraction tool
 
-**Additional Dependencies**: structlog (structured logging per Constitution V), click (CLI framework - deferred), tqdm or rich (progress indication per SC-006)
+**Additional Dependencies**: winston (structured logging per Constitution V), commander (CLI framework), console logging (progress indication per SC-006)
 
-**Architecture Decision**: Synchronous implementation for MVP using httpx.Client() + time.sleep(1) rate limiting. Async migration path available via httpx.AsyncClient() + aiometer if scaling needed. See [research.md](./research.md) for detailed technology evaluation.
+**Architecture Decision**: Synchronous implementation for MVP using Axios with setTimeout for rate limiting. TypeScript provides strong typing and better IDE support. See [research.md](./research.md) for detailed technology evaluation.
 
 ## Constitution Check
 
@@ -100,51 +100,41 @@ specs/[###-feature]/
 ### Source Code (multi-component monorepo)
 
 ```text
-parse/                   # Python scraping & parsing component
+parser/                  # TypeScript scraping & parsing component
 ├── src/
 │   ├── models/         # Data models (Library, Book, UserBookRelation, Shelf, Review)
-│   │   ├── __init__.py
-│   │   ├── library.py       # Library aggregate model
-│   │   ├── book.py          # Book entity with metadata
-│   │   ├── user_book.py     # UserBookRelation with ratings, dates, shelves
-│   │   ├── shelf.py         # Shelf entity
-│   │   └── review.py        # Review entity
-│   ├── parsers/        # HTML parsing logic (BeautifulSoup utilities)
-│   │   ├── __init__.py
-│   │   ├── book_parser.py          # Extract book data from HTML
-│   │   ├── library_parser.py       # Extract library page data
-│   │   └── review_parser.py        # Extract review data
+│   │   ├── library.model.ts         # Library aggregate model
+│   │   ├── book.model.ts            # Book entity with metadata
+│   │   ├── user-book.model.ts       # UserBookRelation with ratings, dates, shelves
+│   │   └── shelf.model.ts           # Shelf entity and ReadingStatus enum
+│   ├── parsers/        # HTML parsing logic (Cheerio utilities)
+│   │   ├── book-parser.ts           # Extract book data from HTML
+│   │   └── library-parser.ts        # Extract library page data
 │   ├── scrapers/       # Web scraping orchestration
-│   │   ├── __init__.py
-│   │   ├── goodreads_scraper.py    # Main scraper orchestrator (requests, rate limiting)
-│   │   └── pagination.py           # Pagination handler
+│   │   ├── goodreads-scraper.ts     # Main scraper orchestrator (Axios, rate limiting)
+│   │   └── pagination.ts            # Pagination handler
 │   ├── validators/     # Input/output validation
-│   │   ├── __init__.py
-│   │   ├── url_validator.py        # Goodreads URL validation
-│   │   └── data_validator.py       # Scraped data validation (ISBN, ratings, etc.)
+│   │   ├── url-validator.ts         # Goodreads URL validation
+│   │   └── data-validator.ts        # Scraped data validation (ISBN, ratings, etc.)
 │   ├── exporters/      # Data export functionality
-│   │   ├── __init__.py
-│   │   ├── json_exporter.py        # JSON export with schema versioning
-│   │   └── csv_exporter.py         # CSV flattened export
+│   │   ├── json-exporter.ts         # JSON export with schema versioning
+│   │   └── csv-exporter.ts          # CSV flattened export (future)
 │   ├── cli/            # Command-line interface
-│   │   ├── __init__.py
-│   │   └── commands.py             # CLI commands (scrape, export)
-│   └── lib/            # Library public API
-│       ├── __init__.py
-│       └── api.py                  # Public library interface
-├── tests/
-│   ├── contract/       # Contract tests for export formats
-│   │   ├── test_json_contract.py
-│   │   └── test_csv_contract.py
-│   ├── integration/    # Integration tests for scraping
-│   │   ├── test_scraping_flow.py
-│   │   ├── test_pagination.py
-│   │   └── test_error_handling.py
-│   └── unit/           # Unit tests for models and utilities
-│       ├── test_models.py
-│       ├── test_validators.py
-│       └── test_parsers.py
-└── pyproject.toml      # Python project configuration
+│   │   └── scrape-library.ts        # CLI commands using Commander
+│   ├── exceptions/     # Custom exception classes
+│   │   └── parser-exceptions.ts     # Error types
+│   ├── utils/          # Utilities
+│   │   └── logger.ts                # Winston logger configuration
+│   ├── __tests__/      # Jest test suite
+│   │   ├── setup.ts                 # Jest setup
+│   │   ├── models.spec.ts           # Model tests
+│   │   ├── url-validator.spec.ts    # URL validator tests
+│   │   └── data-validator.spec.ts   # Data validator tests
+│   ├── api.ts          # Public library API
+│   └── index.ts        # Main entry point
+├── package.json        # Node.js project configuration
+├── tsconfig.json       # TypeScript compiler configuration
+└── README.md           # Documentation
 
 ui/                      # React UI component (future)
 └── README.md
@@ -153,7 +143,7 @@ api/                     # Node.js API component (future)
 └── README.md
 ```
 
-**Structure Decision**: Multi-component monorepo architecture selected. The parse component (Python) handles scraping and data extraction. Future UI component (React) will provide visualization and exploration capabilities. Future API component (Node.js) will integrate between parse and UI. This separation allows each component to use appropriate technology stacks while maintaining clear boundaries. Tests organized by type (contract, integration, unit) per Constitution Principle IV.
+**Structure Decision**: Multi-component monorepo architecture selected. The parser component (TypeScript/Node.js) handles scraping and data extraction. Future UI component (React) will provide visualization and exploration capabilities. Future API component (Node.js) will integrate between parser and UI. This separation allows each component to use appropriate technology stacks while maintaining clear boundaries. Tests organized with Jest in __tests__/ directory per Constitution Principle IV.
 
 ## Complexity Tracking
 

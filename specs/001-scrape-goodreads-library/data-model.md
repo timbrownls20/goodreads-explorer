@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document defines the data models for scraping and storing Goodreads library information. All models use Pydantic v2 for validation, type safety, and JSON serialization per [research.md](./research.md) technical decisions.
+This document defines the data models for scraping and storing Goodreads library information. All models use TypeScript with class-validator decorators for validation, type safety, and JSON serialization per [research.md](./research.md) technical decisions.
 
 ## Entity Diagram
 
@@ -31,52 +31,102 @@ Represents a single book with metadata extracted from Goodreads.
 
 | Field | Type | Required | Constraints | Description |
 |-------|------|----------|-------------|-------------|
-| `goodreads_id` | `str` | Yes | Non-empty | Unique Goodreads book identifier |
-| `title` | `str` | Yes | Non-empty, max 500 chars | Book title |
-| `author` | `str` | Yes | Non-empty, max 200 chars | Primary author name |
-| `additional_authors` | `list[str]` | No | Default: `[]` | Co-authors, editors, etc. |
-| `isbn` | `ISBN \| None` | No | Valid ISBN-10 or ISBN-13 | International Standard Book Number |
-| `isbn13` | `str \| None` | No | 13-digit format | ISBN-13 specifically (if different from ISBN) |
-| `publication_year` | `int \| None` | No | 1000-2100 | Year of publication |
-| `publisher` | `str \| None` | No | Max 200 chars | Publisher name |
-| `page_count` | `int \| None` | No | ≥ 1 | Number of pages |
-| `language` | `str \| None` | No | ISO 639-1 code preferred | Book language |
-| `genres` | `list[str]` | No | Default: `[]`, max 50 genres | Genre tags/categories |
-| `average_rating` | `float \| None` | No | 0.0-5.0 | Goodreads community average rating |
-| `ratings_count` | `int \| None` | No | ≥ 0 | Number of ratings on Goodreads |
-| `cover_image_url` | `HttpUrl \| None` | No | Valid HTTP(S) URL | URL to cover image |
-| `goodreads_url` | `HttpUrl` | Yes | Valid Goodreads book URL | Canonical Goodreads book page |
+| `goodreadsId` | `string` | Yes | Non-empty | Unique Goodreads book identifier |
+| `title` | `string` | Yes | Non-empty, max 500 chars | Book title |
+| `author` | `string` | Yes | Non-empty, max 200 chars | Primary author name |
+| `additionalAuthors` | `string[]` | No | Default: `[]` | Co-authors, editors, etc. |
+| `isbn` | `string \| null` | No | Valid ISBN-10 or ISBN-13 | International Standard Book Number |
+| `isbn13` | `string \| null` | No | 13-digit format | ISBN-13 specifically (if different from ISBN) |
+| `publicationDate` | `string \| null` | No | ISO 8601 date string | Publication date |
+| `publisher` | `string \| null` | No | Max 200 chars | Publisher name |
+| `pageCount` | `number \| null` | No | ≥ 1 | Number of pages |
+| `language` | `string \| null` | No | ISO 639-1 code preferred | Book language |
+| `genres` | `string[]` | No | Default: `[]`, max 50 genres | Genre tags/categories |
+| `averageRating` | `number \| null` | No | 0.0-5.0 | Goodreads community average rating |
+| `ratingsCount` | `number \| null` | No | ≥ 0 | Number of ratings on Goodreads |
+| `coverImageUrl` | `string \| null` | No | Valid HTTP(S) URL | URL to cover image |
+| `goodreadsUrl` | `string` | Yes | Valid Goodreads book URL | Canonical Goodreads book page |
 
 **Validation Rules**:
 - `title`: Must be non-empty after stripping whitespace
 - `author`: Must be non-empty after stripping whitespace
-- `isbn`: Validated using `pydantic-extra-types.isbn.ISBN` (auto-validates ISBN-10/13 format and checksum)
-- `publication_year`: Must be reasonable (1000-2100 range)
-- `page_count`: Must be positive integer if present
-- `average_rating`: Must be 0.0-5.0 if present
+- `isbn`: Validated using class-validator `@IsISBN()` decorator (auto-validates ISBN-10/13 format)
+- `publicationDate`: ISO 8601 format if present
+- `pageCount`: Must be positive integer if present
+- `averageRating`: Must be 0.0-5.0 if present
 - `genres`: Each genre max 50 chars, deduplicated, lowercased
 
 **Example**:
-```python
-from pydantic import BaseModel, Field, HttpUrl
-from pydantic_extra_types.isbn import ISBN
+```typescript
+import { IsString, IsOptional, IsNumber, IsArray, IsISBN, IsURL, Min, Max, Length } from 'class-validator';
 
-class Book(BaseModel):
-    goodreads_id: str = Field(min_length=1)
-    title: str = Field(min_length=1, max_length=500)
-    author: str = Field(min_length=1, max_length=200)
-    additional_authors: list[str] = Field(default_factory=list)
-    isbn: ISBN | None = None
-    isbn13: str | None = Field(None, pattern=r'^\d{13}$')
-    publication_year: int | None = Field(None, ge=1000, le=2100)
-    publisher: str | None = Field(None, max_length=200)
-    page_count: int | None = Field(None, ge=1)
-    language: str | None = None
-    genres: list[str] = Field(default_factory=list, max_length=50)
-    average_rating: float | None = Field(None, ge=0.0, le=5.0)
-    ratings_count: int | None = Field(None, ge=0)
-    cover_image_url: HttpUrl | None = None
-    goodreads_url: HttpUrl
+export class Book {
+  @IsString()
+  @Length(1, 500)
+  goodreadsId: string;
+
+  @IsString()
+  @Length(1, 500)
+  title: string;
+
+  @IsString()
+  @Length(1, 200)
+  author: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  additionalAuthors?: string[];
+
+  @IsOptional()
+  @IsISBN()
+  isbn?: string | null;
+
+  @IsOptional()
+  @IsString()
+  isbn13?: string | null;
+
+  @IsOptional()
+  @IsString()
+  publicationDate?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 200)
+  publisher?: string | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  pageCount?: number | null;
+
+  @IsOptional()
+  @IsString()
+  language?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  genres?: string[];
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(5)
+  averageRating?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  ratingsCount?: number | null;
+
+  @IsOptional()
+  @IsURL()
+  coverImageUrl?: string | null;
+
+  @IsURL()
+  goodreadsUrl: string;
+}
 ```
 
 ---

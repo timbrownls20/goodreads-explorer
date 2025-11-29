@@ -242,6 +242,9 @@ export class GoodreadsScraper {
       throw new PrivateProfileError();
     }
 
+    // Validate HTML structure to detect changes in Goodreads HTML
+    this.validateHtmlStructure(reviewListHtml, 'library');
+
     const libraryResult = LibraryParser.parseLibraryPage(reviewListHtml, reviewListUrl);
 
     // Prefer username from URL, then from HTML parsing, then fallback to user-{userId}
@@ -775,6 +778,55 @@ export class GoodreadsScraper {
       privateText.includes('This profile is private') ||
       privateText.includes('profile is set to private')
     );
+  }
+
+  /**
+   * Check for expected HTML structure and log warnings if selectors are missing
+   * This helps detect when Goodreads changes their HTML structure
+   */
+  private validateHtmlStructure(html: string, pageType: 'library' | 'book'): void {
+    const $ = cheerio.load(html);
+    const missing: string[] = [];
+
+    if (pageType === 'library') {
+      // Check for key library page selectors
+      const expectedSelectors = [
+        '#booksBody',           // Main books container
+        '.bookalike',           // Book rows
+        '.pagination',          // Pagination element
+      ];
+
+      for (const selector of expectedSelectors) {
+        if ($(selector).length === 0) {
+          missing.push(selector);
+        }
+      }
+
+      if (missing.length > 0) {
+        logger.warn('HTML structure may have changed - missing expected selectors on library page', {
+          missingSelectors: missing,
+          message: 'Goodreads may have updated their HTML structure. Scraping may fail or return incomplete data.'
+        });
+      }
+    } else if (pageType === 'book') {
+      // Check for key book page selectors
+      const expectedSelectors = [
+        '.readingTimeline__row',  // Reading timeline
+      ];
+
+      for (const selector of expectedSelectors) {
+        if ($(selector).length === 0) {
+          missing.push(selector);
+        }
+      }
+
+      if (missing.length > 0) {
+        logger.debug('Some expected selectors missing on book page', {
+          missingSelectors: missing,
+          message: 'This may be normal if the book has no reading timeline'
+        });
+      }
+    }
   }
 
   /**
