@@ -357,6 +357,7 @@ export class GoodreadsScraper {
     let page = 1;
     let hasNextPage = true;
     let totalProcessed = 0; // Track total books processed (scraped + skipped)
+    let shelfTotal: number | null = null; // Total books on shelf (extracted from first page)
 
     const effectiveShelf = shelfSlug || status;
     logger.info(`Scraping shelf: ${effectiveShelf}`);
@@ -373,6 +374,16 @@ export class GoodreadsScraper {
 
       const html = await this.fetchWithRetry(shelfUrl);
       const $ = cheerio.load(html);
+
+      // Extract shelf total from first page
+      if (page === 1) {
+        shelfTotal = PaginationHelper.extractShelfTotal(html);
+        if (shelfTotal !== null) {
+          logger.info(`Shelf contains ${shelfTotal} books total`, {
+            shelf: effectiveShelf
+          });
+        }
+      }
 
       // Parse books from table
       const result = await this.extractBooksFromPage($, status, userId, username, effectiveShelf);
@@ -393,12 +404,13 @@ export class GoodreadsScraper {
       // Add scraped books
       userBooks.push(...result.books);
 
-      // In resume mode: stop if page has books but all were skipped
-      // This assumes books are in the same order as previous scrape
-      if (this.options.resume && result.totalRows > 0 && result.books.length === 0) {
-        logger.info('Stopping: all books on page already scraped', {
+      // In resume mode: stop when we've processed all books on the shelf
+      // This works even if books are scattered across pages
+      if (this.options.resume && shelfTotal !== null && totalProcessed >= shelfTotal) {
+        logger.info('Stopping: all books on shelf have been processed', {
           page,
-          rowsOnPage: result.totalRows,
+          totalProcessed,
+          shelfTotal,
           shelf: effectiveShelf
         });
         hasNextPage = false;

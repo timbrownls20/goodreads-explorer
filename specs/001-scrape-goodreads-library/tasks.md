@@ -245,7 +245,10 @@
 
 - [x] T099 [P] Add comprehensive error messages with context per Constitution Principle V (source data, operation attempted, expected vs actual)
 - [x] T100 [P] Add CLI help text and usage examples to parser/src/cli/scrape-library.ts
-- [x] T101 Add resume capability for interrupted scrapes per SC-004 (check for existing output files, skip already-scraped books, stop when page fully scraped)
+- [x] T101 Add resume capability for interrupted scrapes per SC-004 (check for existing output files, skip already-scraped books, stop when processed >= shelf total)
+  - **Pagination Strategy**: Extract shelf total from first page HTML, track processed books (scraped + skipped), stop when `processed >= shelfTotal` to avoid unnecessary page fetches
+  - **Implementation**: Parse "Showing X of Y books" text on first page, store as `shelfTotal`, increment `totalProcessed` for each book row encountered (whether scraped or skipped)
+  - **Why**: More reliable than consecutive-page tracking; handles scattered books across pages, works even if Goodreads changes book ordering
 - [x] T102 [P] Add timeout configuration to axios client (default 30s, configurable via CLI --timeout)
 - [x] T103 [P] Add retry count configuration (default 3, configurable via CLI --retries)
 - [x] T104 [P] Create parser/README.md with installation instructions and basic usage (link to quickstart.md)

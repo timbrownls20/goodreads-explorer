@@ -93,4 +93,27 @@ export class PaginationHelper {
       return profileUrl;
     }
   }
+
+  /**
+   * Extract the total number of books on the current shelf from HTML
+   * Returns null if the count cannot be determined
+   */
+  static extractShelfTotal(html: string): number | null {
+    const $ = cheerio.load(html);
+
+    // Find the selected shelf link (e.g., "Read  (1335)")
+    const selectedShelf = $('.selectedShelf').first();
+    if (selectedShelf.length === 0) {
+      return null;
+    }
+
+    const text = selectedShelf.text();
+    // Extract number from parentheses: "Read  (1335)" -> 1335
+    const match = text.match(/\((\d+)\)/);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+
+    return null;
+  }
 }
