@@ -404,6 +404,12 @@ export class GoodreadsScraper {
       // Add scraped books
       userBooks.push(...result.books);
 
+      // Apply limit based on total books processed (not just scraped)
+      // This ensures --limit 10 processes 10 books total, regardless of resume skips
+      if (this.options.limit && totalProcessed >= this.options.limit) {
+        hasNextPage = false;
+      }
+
       // In resume mode: stop when we've processed all books on the shelf
       // This works even if books are scattered across pages
       if (this.options.resume && shelfTotal !== null && totalProcessed >= shelfTotal) {
@@ -413,12 +419,6 @@ export class GoodreadsScraper {
           shelfTotal,
           shelf: effectiveShelf
         });
-        hasNextPage = false;
-      }
-
-      // Apply limit based on total books processed (not just scraped)
-      // This ensures --limit 10 processes 10 books total, regardless of resume skips
-      if (this.options.limit && totalProcessed >= this.options.limit) {
         hasNextPage = false;
       }
 
