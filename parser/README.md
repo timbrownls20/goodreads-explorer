@@ -38,8 +38,8 @@ pnpm run scrape scrape https://www.goodreads.com/user/show/172435467-tim-brown
 # Scrape to custom directory
 pnpm run scrape scrape https://www.goodreads.com/user/show/172435467-tim-brown -d ./books
 
-# Scrape first 100 books with slower rate limit
-pnpm run scrape scrape https://www.goodreads.com/user/show/172435467-tim-brown --limit 100 --rate-limit 2000
+# Scrape with slower rate limit
+pnpm run scrape scrape https://www.goodreads.com/user/show/172435467-tim-brown --rate-limit 2000
 
 # Show help
 pnpm run scrape help
@@ -80,7 +80,6 @@ console.log(`Books with reviews: ${library.getBooksWithReviews().length}`);
 | `--rate-limit <ms>` | Delay between requests (ms) | `1000` |
 | `--max-retries <count>` | Maximum retry attempts | `3` |
 | `--timeout <ms>` | Request timeout (ms) | `30000` |
-| `--limit <count>` | Maximum books to scrape | unlimited |
 | `--sort-by <field>` | Sort order | none |
 | `--no-progress` | Disable progress reporting | `false` |
 
@@ -105,7 +104,6 @@ interface ScraperOptions {
   rateLimitDelay?: number;      // ms between requests (default: 1000)
   maxRetries?: number;           // max retry attempts (default: 3)
   timeout?: number;              // request timeout in ms (default: 30000)
-  limit?: number;                // max books to scrape (default: unlimited)
   sort?: string | null;          // sort order (default: null)
   outputDir?: string;            // output directory for individual books (default: './output')
   progressCallback?: (current: number, total: number) => void;

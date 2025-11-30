@@ -17,10 +17,9 @@
     "lint": "eslint \"src/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "scrape": "ts-node src/cli/scrape-library.ts",
-    "scrape:dev:limit": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --limit 10",
-    "scrape:dev:resume": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --limit 10 --resume",
+    "scrape:dev:resume": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --resume",
     "scrape:dev:title": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --title Babel",
-    "scrape:dev:shelf": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --shelf paused --limit 10",
+    "scrape:dev:shelf": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --shelf paused",
     "scrape:all": "ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown",
     "scrape:all:resume": "LOG_LEVEL=debug ts-node src/cli/scrape-library.ts scrape https://www.goodreads.com/user/show/172435467-tim-brown --resume",
     "prepublishOnly": "pnpm run clean && pnpm run build"

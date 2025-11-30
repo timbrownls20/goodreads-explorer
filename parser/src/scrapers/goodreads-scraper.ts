@@ -174,7 +174,6 @@ export interface ScraperOptions {
   rateLimitDelay?: number; // ms between requests (default 1000)
   maxRetries?: number; // max retry attempts (default 3)
   timeout?: number; // request timeout in ms (default 30000)
-  limit?: number; // max books to scrape per shelf (default null = all)
   shelfFilter?: string; // scrape only a specific exclusive shelf (e.g., read, to-read)
   titleFilter?: string; // filter books by title (case-insensitive substring match)
   sort?: string | null; // sort order (default null)
@@ -192,7 +191,6 @@ export class GoodreadsScraper {
       rateLimitDelay: options.rateLimitDelay ?? 1000,
       maxRetries: options.maxRetries ?? 3,
       timeout: options.timeout ?? 30000,
-      limit: options.limit ?? 0,
       shelfFilter: options.shelfFilter ?? '',
       titleFilter: options.titleFilter ?? '',
       sort: options.sort ?? null,
@@ -403,12 +401,6 @@ export class GoodreadsScraper {
 
       // Add scraped books
       userBooks.push(...result.books);
-
-      // Apply limit based on total books processed (not just scraped)
-      // This ensures --limit 10 processes 10 books total, regardless of resume skips
-      if (this.options.limit && totalProcessed >= this.options.limit) {
-        hasNextPage = false;
-      }
 
       // In resume mode: stop when we've processed all books on the shelf
       // This works even if books are scattered across pages

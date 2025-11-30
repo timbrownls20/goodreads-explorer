@@ -71,8 +71,8 @@ pnpm run scrape scrape https://www.goodreads.com/user/show/12345 -f csv -o my-li
 # Scrape with individual book files
 pnpm run scrape scrape https://www.goodreads.com/user/show/12345 --per-book-files -d ./output
 
-# Scrape first 100 books with slower rate limit
-pnpm run scrape scrape https://www.goodreads.com/user/show/12345 --limit 100 --rate-limit 2000
+# Scrape with slower rate limit
+pnpm run scrape scrape https://www.goodreads.com/user/show/12345 --rate-limit 2000
 
 # Show help
 pnpm run scrape help
@@ -86,7 +86,6 @@ pnpm run scrape help
 - `--rate-limit <ms>`: Delay between requests in ms - default: 1000
 - `--max-retries <count>`: Maximum retry attempts - default: 3
 - `--timeout <ms>`: Request timeout in ms - default: 30000
-- `--limit <count>`: Maximum number of books to scrape
 - `--sort-by <field>`: Sort by (date-read, date-added, title, author, rating)
 - `--per-book-files`: Save individual JSON file per book
 - `--no-progress`: Disable progress reporting

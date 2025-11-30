@@ -21,7 +21,6 @@ program
   .option('--rate-limit <ms>', 'Delay between requests in milliseconds', '1000')
   .option('--max-retries <count>', 'Maximum retry attempts', '3')
   .option('--timeout <ms>', 'Request timeout in milliseconds', '30000')
-  .option('--limit <count>', 'Maximum number of books to scrape per shelf')
   .option('--shelf <name>', 'Scrape only a specific exclusive shelf (e.g., read, to-read, currently-reading)')
   .option('--title <search>', 'Filter books by title (case-insensitive substring match)')
   .option('--sort-by <field>', 'Sort order (date-read, date-added, title, author, rating)')
@@ -32,7 +31,6 @@ program
       const rateLimitDelay = parseInt(options.rateLimit, 10);
       const maxRetries = parseInt(options.maxRetries, 10);
       const timeout = parseInt(options.timeout, 10);
-      const limit = options.limit ? parseInt(options.limit, 10) : undefined;
       const shelfFilter = options.shelf || undefined;
       const titleFilter = options.title || undefined;
 
@@ -42,7 +40,6 @@ program
         rateLimitDelay,
         maxRetries,
         timeout,
-        limit,
         shelfFilter,
         titleFilter,
         resume: options.resume || false,
@@ -54,7 +51,6 @@ program
         rateLimitDelay,
         maxRetries,
         timeout,
-        limit,
         shelfFilter,
         titleFilter,
         sort: options.sortBy || null,
